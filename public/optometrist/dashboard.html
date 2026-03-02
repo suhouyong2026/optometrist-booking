@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>验光师后台 - 班次管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            padding: 12px 24px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .month-selector {
+            margin-bottom: 20px;
+        }
+        
+        .month-selector input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .calendar-day.has-shift {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .calendar-day .day-number {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .calendar-day .day-label {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .save-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .verify-section {
+            margin-top: 20px;
+        }
+        
+        .verify-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .verify-btn {
+            width: 100%;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .verify-result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        .verify-result.success {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+        }
+        
+        .verify-result.error {
+            background-color: #f8d7da;
+            border: 2px solid #dc3545;
+        }
+        
+        .verify-result .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .verify-result .message {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .verify-result .info {
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .confirm-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>验光师后台 - 许晓龙</h1>
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+    
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('shifts')">班次管理</button>
+            <button class="tab-btn" onclick="switchTab('verify')">核销验证</button>
+        </div>
+        
+        <div id="shiftsTab" class="tab-content active">
+            <div class="card">
+                <h2>设置上班日期</h2>
+                
+                <div class="message" id="shiftMessage"></div>
+                
+                <div class="month-selector">
+                    <label>选择月份：</label>
+                    <input type="month" id="monthInput" onchange="loadCalendar()">
+                </div>
+                
+                <div class="calendar-grid" id="calendarGrid"></div>
+                
+                <button class="save-btn" onclick="saveShifts()">保存班次</button>
+            </div>
+        </div>
+        
+        <div id="verifyTab" class="tab-content">
+            <div class="card">
+                <h2>扫码核销</h2>
+                
+                <div class="verify-section">
+                    <div style="position: relative;">
+                        <input type="text" class="verify-input" id="serialNumberInput" 
+                               placeholder="请输入预约流水号或扫描二维码">
+                        <button class="scan-btn" onclick="scanQRCode()" style="
+                            position: absolute;
+                            right: 10px;
+                            top: 50%;
+                            transform: translateY(-50%);
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            width: 40px;
+                            height: 40px;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 20px;
+                        ">
+                            📱
+                        </button>
+                    </div>
+                    <button class="verify-btn" onclick="verifyBooking()">验证</button>
+                </div>
+                
+                <!-- 扫码模态框 -->
+                <div id="scanModal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.8);
+                    display: none;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                ">
+                    <div style="
+                        background: white;
+                        padding: 20px;
+                        border-radius: 10px;
+                        width: 90%;
+                        max-width: 400px;
+                        text-align: center;
+                    ">
+                        <h3 style="margin-bottom: 20px;">扫码验证</h3>
+                        <div id="scanArea" style="
+                            width: 300px;
+                            height: 300px;
+                            margin: 0 auto 20px;
+                            border: 2px solid #667eea;
+                            border-radius: 10px;
+                            position: relative;
+                        ">
+                            <video id="scanVideo" style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                            "></video>
+                        </div>
+                        <button onclick="closeScanModal()" style="
+                            padding: 10px 20px;
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                        ">
+                            关闭
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="verify-result" id="verifyResult">
+                    <div class="icon" id="resultIcon"></div>
+                    <div class="message" id="resultMessage"></div>
+                    <div class="info" id="resultInfo"></div>
+                    <button class="confirm-btn" id="confirmBtn" style="display:none;" onclick="confirmVerify()">确认核销</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        let currentUser = null;
+        let selectedDates = [];
+        let existingShifts = [];
+        let currentVerifySerial = null;
+        
+        // 检查登录状态
+        function checkAuth() {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = '/staff.html';
+                return;
+            }
+            
+            currentUser = JSON.parse(userStr);
+            if (currentUser.role !== 'optometrist') {
+                window.location.href = '/staff.html';
+            }
+        }
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            
+            // 设置默认月份为当前月
+            const now = new Date();
+            const monthStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+            document.getElementById('monthInput').value = monthStr;
+            
+            loadCalendar();
+        });
+        
+        // 切换标签
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+        }
+        
+        // 加载日历
+        async function loadCalendar() {
+            const monthInput = document.getElementById('monthInput').value;
+            const [year, month] = monthInput.split('-');
+            
+            // 获取该月的班次
+            try {
+                const response = await fetch(`/api/shifts/${currentUser.id}/${monthInput}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    existingShifts = result.shifts.map(s => s.date);
+                    renderCalendar(year, month);
+                }
+            } catch (error) {
+                console.error('加载班次失败:', error);
+            }
+        }
+        
+        // 渲染日历
+        function renderCalendar(year, month) {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const startDay = firstDay.getDay();
+            const totalDays = lastDay.getDate();
+            
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            
+            // 添加空白格子（上个月的）
+            for (let i = 0; i < startDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day';
+                emptyCell.style.visibility = 'hidden';
+                grid.appendChild(emptyCell);
+            }
+            
+            // 添加日期
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${month.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day';
+                
+                const dateObj = new Date(year, month - 1, day);
+                const weekday = weekdays[dateObj.getDay()];
+                
+                dayCell.innerHTML = `
+                    <div class="day-number">${day}</div>
+                    <div class="day-label">${weekday}</div>
+                `;
+                
+                // 检查是否有班次
+                if (existingShifts.includes(dateStr)) {
+                    dayCell.classList.add('has-shift');
+                }
+                
+                // 检查是否已选中
+                if (selectedDates.includes(dateStr)) {
+                    dayCell.classList.add('selected');
+                }
+                
+                dayCell.addEventListener('click', () => toggleDate(dateStr, dayCell));
+                
+                grid.appendChild(dayCell);
+            }
+        }
+        
+        // 切换日期选择
+        function toggleDate(dateStr, element) {
+            const index = selectedDates.indexOf(dateStr);
+            
+            if (index > -1) {
+                selectedDates.splice(index, 1);
+                element.classList.remove('selected');
+            } else {
+                selectedDates.push(dateStr);
+                element.classList.add('selected');
+            }
+        }
+        
+        // 保存班次
+        async function saveShifts() {
+            const messageEl = document.getElementById('shiftMessage');
+            
+            try {
+                const response = await fetch('/api/shifts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        optometristId: currentUser.id,
+                        dates: selectedDates
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageEl.className = 'message success';
+                    messageEl.textContent = '班次保存成功！';
+                    messageEl.style.display = 'block';
+                    
+                    // 重新加载
+                    setTimeout(() => {
+                        loadCalendar();
+                        messageEl.style.display = 'none';
+                    }, 1500);
+                } else {
+                    messageEl.className = 'message error';
+                    messageEl.textContent = result.message;
+                    messageEl.style.display = 'block';
+                }
+            } catch (error) {
+                messageEl.className = 'message error';
+                messageEl.textContent = '保存失败，请稍后重试';
+                messageEl.style.display = 'block';
+            }
+        }
+        
+        // 验证预约
+        async function verifyBooking() {
+            const serialNumber = document.getElementById('serialNumberInput').value.trim();
+            
+            if (!serialNumber) {
+                alert('请输入预约流水号');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ serialNumber })
+                });
+                
+                const result = await response.json();
+                showVerifyResult(result);
+            } catch (error) {
+                showVerifyResult({
+                    success: false,
+                    message: '验证失败，请稍后重试'
+                });
+            }
+        }
+        
+        // 显示验证结果
+        function showVerifyResult(result) {
+            const resultDiv = document.getElementById('verifyResult');
+            const icon = document.getElementById('resultIcon');
+            const message = document.getElementById('resultMessage');
+            const info = document.getElementById('resultInfo');
+            const confirmBtn = document.getElementById('confirmBtn');
+            
+            resultDiv.style.display = 'block';
+            
+            if (result.valid) {
+                if (result.alreadyUsed) {
+                    icon.textContent = '⚠️';
+                    message.textContent = '已核销';
+                    message.style.color = '#ffc107';
+                    confirmBtn.style.display = 'none';
+                } else {
+                    icon.textContent = '✓';
+                    message.textContent = '预约有效';
+                    message.style.color = '#28a745';
+                    confirmBtn.style.display = 'block';
+                    currentVerifySerial = result.booking.serialNumber;
+                }
+                
+                info.innerHTML = `
+                    <p>姓名：${result.booking.customerName}</p>
+                    <p>年龄：${result.booking.age}</p>
+                    <p>电话：${result.booking.phone}</p>
+                    <p>预约时间：${result.booking.date} ${result.booking.timeSlot}</p>
+                    <p>流水号：${result.booking.serialNumber}</p>
+                `;
+            } else {
+                icon.textContent = '✗';
+                message.textContent = result.message || '预约无效';
+                message.style.color = '#dc3545';
+                info.textContent = '请核对预约信息';
+                confirmBtn.style.display = 'none';
+            }
+        }
+        
+        // 确认核销
+        async function confirmVerify() {
+            if (!currentVerifySerial) return;
+            
+            try {
+                const response = await fetch('/api/verify/confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ serialNumber: currentVerifySerial })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('核销成功！');
+                    document.getElementById('verifyResult').style.display = 'none';
+                    document.getElementById('serialNumberInput').value = '';
+                    currentVerifySerial = null;
+                } else {
+                    alert(result.message || '核销失败');
+                }
+            } catch (error) {
+                alert('核销失败，请稍后重试');
+            }
+        }
+        
+        // 扫码功能
+        let scanner = null;
+        
+        // 打开扫码模态框
+        function scanQRCode() {
+            const modal = document.getElementById('scanModal');
+            modal.style.display = 'flex';
+            
+            // 初始化扫码
+            initScanner();
+        }
+        
+        // 关闭扫码模态框
+        function closeScanModal() {
+            const modal = document.getElementById('scanModal');
+            modal.style.display = 'none';
+            
+            // 停止摄像头
+            const video = document.getElementById('scanVideo');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+        
+        // 初始化扫码器
+        function initScanner() {
+            const video = document.getElementById('scanVideo');
+            const canvas = document.createElement('canvas');
+            
+            // 请求摄像头权限
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                    
+                    // 开始识别
+                    requestAnimationFrame(() => scanFrame(video, canvas));
+                })
+                .catch(err => {
+                    alert('无法访问摄像头，请检查权限设置');
+                    closeScanModal();
+                });
+        }
+        
+        // 扫描帧
+        function scanFrame(video, canvas) {
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // 转换为灰度图像进行识别
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = decodeQRCode(imageData);
+            
+            if (code) {
+                try {
+                    const qrData = JSON.parse(code);
+                    if (qrData.serialNumber) {
+                        document.getElementById('serialNumberInput').value = qrData.serialNumber;
+                        closeScanModal();
+                        verifyBooking();
+                        return;
+                    }
+                } catch (e) {
+                    // 不是有效的二维码数据
+                }
+            }
+            
+            // 继续扫描
+            requestAnimationFrame(() => scanFrame(video, canvas));
+        }
+        
+        // 使用 jsQR 库解码二维码
+        function decodeQRCode(imageData) {
+            try {
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'dontInvert'
+                });
+                return code ? code.data : null;
+            } catch (error) {
+                return null;
+            }
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/staff.html';
+        }
+    </script>
+</body>
+</html>

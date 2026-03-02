@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>验光师预约 - 天津标准眼镜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .date-selector {
+            margin-top: 20px;
+        }
+        
+        .date-selector h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .date-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .date-item {
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .date-item.available {
+            border-color: #667eea;
+            background-color: #e8f4ff;
+            cursor: pointer;
+        }
+        
+        .date-item.unavailable {
+            border-color: #ccc;
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .date-item.selected {
+            background-color: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .time-slots {
+            margin-top: 20px;
+        }
+        
+        .time-slots h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+        }
+        
+        .time-slot {
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .time-slot.available {
+            border-color: #28a745;
+            background-color: #d4edda;
+            cursor: pointer;
+        }
+        
+        .time-slot.unavailable {
+            border-color: #ccc;
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .time-slot.selected {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-container {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .qr-code {
+            margin: 20px auto;
+            max-width: 200px;
+        }
+        
+        .serial-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+        }
+        
+        .staff-login {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .staff-login a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        @media (max-width: 480px) {
+            .date-grid {
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            }
+            
+            .time-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>验光师预约</h1>
+        <p>天津标准眼镜 · 许晓龙验光师</p>
+    </div>
+    
+    <div class="loading" id="loading">
+        <p>加载中...</p>
+    </div>
+    
+    <div class="error-message" id="errorMessage"></div>
+    
+    <!-- 登录提示 -->
+    <div class="form-container" id="loginPrompt" style="display: none;">
+        <h2 style="text-align: center; margin-bottom: 30px;">请先登录</h2>
+        <p style="text-align: center; margin-bottom: 30px;">登录后才能预约验光服务</p>
+        <button class="submit-btn" onclick="loginWithWechat()">微信登录</button>
+    </div>
+    
+    <div class="form-container" id="formContainer">
+        <div class="form-group">
+            <label for="customerName">姓名 *</label>
+            <input type="text" id="customerName" required placeholder="请输入您的姓名">
+        </div>
+        
+        <div class="form-group">
+            <label for="age">年龄 *</label>
+            <input type="number" id="age" required placeholder="请输入您的年龄">
+        </div>
+        
+        <div class="form-group">
+            <label for="phone">手机号 *</label>
+            <input type="tel" id="phone" required placeholder="请输入您的手机号">
+        </div>
+        
+        <div class="date-selector">
+            <h3>请选择预约日期</h3>
+            <div class="date-grid" id="dateGrid"></div>
+        </div>
+        
+        <div class="time-slots">
+            <h3>请选择预约时段</h3>
+            <div class="time-grid" id="timeGrid"></div>
+        </div>
+        
+        <button class="submit-btn" id="submitBtn" disabled>确认预约</button>
+    </div>
+    
+    <div class="result-container" id="resultContainer">
+        <h2>预约成功！</h2>
+        <p>请保存以下二维码，验光时出示给验光师</p>
+        <div class="qr-code">
+            <img id="qrCodeImage" src="" alt="预约二维码">
+        </div>
+        <div class="serial-number" id="serialNumber"></div>
+        <p>预约时间：<span id="bookingTime"></span></p>
+        <button class="submit-btn" onclick="location.reload()">再次预约</button>
+    </div>
+    
+    <div class="staff-login">
+        <a href="/profile.html">个人中心</a> | 
+        <a href="/staff.html">员工入口</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        // 全局变量
+        let selectedDate = '';
+        let selectedTime = '';
+        let availableDates = [];
+        let availableSlots = [];
+        let currentUser = null;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+        });
+        
+        // 检查登录状态
+        function checkLoginStatus() {
+            const userStr = localStorage.getItem('customerUser');
+            if (userStr) {
+                currentUser = JSON.parse(userStr);
+                loadAvailableDates();
+            } else {
+                showLoginPrompt();
+            }
+        }
+        
+        // 显示登录提示
+        function showLoginPrompt() {
+            document.getElementById('loginPrompt').style.display = 'block';
+            document.getElementById('formContainer').style.display = 'none';
+        }
+        
+        // 显示预约表单
+        function showBookingForm() {
+            document.getElementById('loginPrompt').style.display = 'none';
+            document.getElementById('formContainer').style.display = 'block';
+        }
+        
+        // 微信登录
+        function loginWithWechat() {
+            // 模拟微信登录
+            // 实际项目中需要集成微信网页授权
+            // 这里使用模拟数据进行测试
+            const mockUser = {
+                id: 'wechat_' + Math.random().toString(36).substr(2, 9),
+                name: '测试用户',
+                phone: '13800138000',
+                avatar: ''
+            };
+            
+            localStorage.setItem('customerUser', JSON.stringify(mockUser));
+            currentUser = mockUser;
+            showBookingForm();
+            loadAvailableDates();
+        }
+
+        // 加载可预约日期
+        async function loadAvailableDates() {
+            showLoading(true);
+            hideError();
+            
+            try {
+                const response = await fetch('/api/available-dates');
+                const result = await response.json();
+                
+                if (result.success) {
+                    availableDates = result.dates;
+                    renderDateGrid();
+                } else {
+                    showError(result.message || '加载日期失败');
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 渲染日期网格
+        function renderDateGrid() {
+            const dateGrid = document.getElementById('dateGrid');
+            dateGrid.innerHTML = '';
+            
+            availableDates.forEach(dateInfo => {
+                const dateItem = document.createElement('div');
+                dateItem.className = `date-item ${dateInfo.available ? 'available' : 'unavailable'}`;
+                dateItem.textContent = formatDate(dateInfo.date);
+                
+                if (dateInfo.available) {
+                    dateItem.addEventListener('click', () => selectDate(dateInfo.date));
+                }
+                
+                dateGrid.appendChild(dateItem);
+            });
+        }
+
+        // 选择日期
+        function selectDate(date) {
+            // 清除之前的选择
+            document.querySelectorAll('.date-item.selected').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // 设置当前选择
+            const selectedElement = Array.from(document.querySelectorAll('.date-item')).find(
+                el => el.textContent === formatDate(date)
+            );
+            if (selectedElement) {
+                selectedElement.classList.add('selected');
+            }
+            
+            selectedDate = date;
+            loadTimeSlots(date);
+        }
+
+        // 加载时间段
+        async function loadTimeSlots(date) {
+            showLoading(true);
+            hideError();
+            
+            try {
+                const response = await fetch(`/api/time-slots/${date}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    availableSlots = result.slots;
+                    renderTimeGrid();
+                    document.getElementById('submitBtn').disabled = false;
+                } else {
+                    showError(result.message || '该日期不可预约');
+                    document.getElementById('submitBtn').disabled = true;
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+                document.getElementById('submitBtn').disabled = true;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 渲染时间段网格
+        function renderTimeGrid() {
+            const timeGrid = document.getElementById('timeGrid');
+            timeGrid.innerHTML = '';
+            
+            availableSlots.forEach(slot => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = `time-slot ${slot.available ? 'available' : 'unavailable'}`;
+                timeSlot.textContent = slot.time;
+                
+                if (slot.available) {
+                    timeSlot.addEventListener('click', () => selectTime(slot.time));
+                }
+                
+                timeGrid.appendChild(timeSlot);
+            });
+        }
+
+        // 选择时间段
+        function selectTime(time) {
+            // 清除之前的选择
+            document.querySelectorAll('.time-slot.selected').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // 设置当前选择
+            const selectedElement = Array.from(document.querySelectorAll('.time-slot')).find(
+                el => el.textContent === time
+            );
+            if (selectedElement) {
+                selectedElement.classList.add('selected');
+            }
+            
+            selectedTime = time;
+        }
+
+        // 格式化日期显示
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const weekday = weekdays[date.getDay()];
+            return `${month}/${day}\n${weekday}`;
+        }
+
+        // 提交预约
+        document.getElementById('submitBtn').addEventListener('click', async function() {
+            const customerName = document.getElementById('customerName').value.trim();
+            const age = document.getElementById('age').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            
+            if (!customerName || !age || !phone) {
+                showError('请填写完整信息');
+                return;
+            }
+            
+            if (!selectedDate || !selectedTime) {
+                showError('请选择预约日期和时间');
+                return;
+            }
+            
+            showLoading(true);
+            hideError();
+            
+            try {
+                const response = await fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customerName,
+                        age: parseInt(age),
+                        phone,
+                        date: selectedDate,
+                        timeSlot: selectedTime
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 显示结果
+                    document.getElementById('formContainer').style.display = 'none';
+                    document.getElementById('resultContainer').style.display = 'block';
+                    
+                    document.getElementById('qrCodeImage').src = result.booking.qrCode;
+                    document.getElementById('serialNumber').textContent = result.booking.serialNumber;
+                    document.getElementById('bookingTime').textContent = 
+                        `${result.booking.date} ${result.booking.timeSlot}`;
+                } else {
+                    showError(result.message || '预约失败');
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 隐藏错误信息
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

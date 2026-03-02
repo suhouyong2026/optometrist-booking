@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员后台 - 数据统计</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-bar label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .filter-bar input, .filter-bar select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .trend {
+            font-size: 12px;
+            color: #28a745;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart-container h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .daily-stats-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .daily-stats-table th {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .daily-stats-table td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .daily-stats-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 300px;
+            gap: 10px;
+            padding: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .bar-item {
+            flex: 1;
+            min-width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .bar {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 5px 5px 0 0;
+            transition: height 0.3s;
+            position: relative;
+        }
+        
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .bar-label {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 16px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>管理员后台 - 数据统计</h1>
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+    
+    <div class="container">
+        <div class="filter-bar">
+            <label>统计月份：</label>
+            <input type="month" id="monthFilter" onchange="loadStatistics()">
+        </div>
+        
+        <div class="stats-cards">
+            <div class="stat-card">
+                <h3>总预约数</h3>
+                <div class="number" id="totalBookings">0</div>
+                <div class="trend">本月累计</div>
+            </div>
+            <div class="stat-card">
+                <h3>已核销数</h3>
+                <div class="number" id="completedBookings">0</div>
+                <div class="trend">完成率：<span id="completionRate">0%</span></div>
+            </div>
+            <div class="stat-card">
+                <h3>待核销数</h3>
+                <div class="number" id="pendingBookings">0</div>
+                <div class="trend">待处理</div>
+            </div>
+            <div class="stat-card">
+                <h3>取消数</h3>
+                <div class="number" id="cancelledBookings">0</div>
+                <div class="trend">取消率：<span id="cancellationRate">0%</span></div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h2>每日预约趋势</h2>
+            <div class="bar-chart" id="barChart"></div>
+        </div>
+        
+        <div class="chart-container">
+            <h2>每日详细统计</h2>
+            <table class="daily-stats-table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>总预约</th>
+                        <th>已核销</th>
+                        <th>待核销</th>
+                        <th>已取消</th>
+                        <th>核销率</th>
+                    </tr>
+                </thead>
+                <tbody id="dailyStatsBody"></tbody>
+            </table>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                暂无统计数据
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        
+        // 检查登录状态
+        function checkAuth() {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = '/staff.html';
+                return;
+            }
+            
+            currentUser = JSON.parse(userStr);
+            if (currentUser.role !== 'admin') {
+                window.location.href = '/staff.html';
+            }
+        }
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            
+            // 设置默认月份为当前月
+            const now = new Date();
+            const monthStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+            document.getElementById('monthFilter').value = monthStr;
+            
+            loadStatistics();
+        });
+        
+        // 加载统计数据
+        async function loadStatistics() {
+            const monthFilter = document.getElementById('monthFilter').value;
+            
+            try {
+                const response = await fetch(`/api/statistics?month=${monthFilter}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderStatistics(result);
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+        
+        // 渲染统计数据
+        function renderStatistics(result) {
+            const { summary, dailyStats } = result;
+            
+            // 更新统计卡片
+            document.getElementById('totalBookings').textContent = summary.total;
+            document.getElementById('completedBookings').textContent = summary.completed;
+            document.getElementById('pendingBookings').textContent = summary.pending;
+            document.getElementById('cancelledBookings').textContent = summary.cancelled;
+            
+            // 计算完成率
+            const completionRate = summary.total > 0 
+                ? Math.round((summary.completed / summary.total) * 100) 
+                : 0;
+            document.getElementById('completionRate').textContent = `${completionRate}%`;
+            
+            // 计算取消率
+            const cancellationRate = summary.total > 0 
+                ? Math.round((summary.cancelled / summary.total) * 100) 
+                : 0;
+            document.getElementById('cancellationRate').textContent = `${cancellationRate}%`;
+            
+            // 渲染柱状图
+            renderBarChart(dailyStats);
+            
+            // 渲染详细表格
+            renderDailyStatsTable(dailyStats);
+        }
+        
+        // 渲染柱状图
+        function renderBarChart(dailyStats) {
+            const chart = document.getElementById('barChart');
+            
+            if (dailyStats.length === 0) {
+                chart.innerHTML = '<div class="empty-state">暂无数据</div>';
+                return;
+            }
+            
+            const maxValue = Math.max(...dailyStats.map(d => d.total), 1);
+            
+            chart.innerHTML = dailyStats.map(day => {
+                const height = (day.total / maxValue) * 250;
+                return `
+                    <div class="bar-item">
+                        <div class="bar" style="height: ${height}px;">
+                            <div class="bar-value">${day.total}</div>
+                        </div>
+                        <div class="bar-label">${day.date.slice(5)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 渲染每日详细表格
+        function renderDailyStatsTable(dailyStats) {
+            const tbody = document.getElementById('dailyStatsBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (dailyStats.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = dailyStats.map(day => {
+                const rate = day.total > 0 
+                    ? Math.round((day.completed / day.total) * 100) 
+                    : 0;
+                
+                return `
+                    <tr>
+                        <td>${day.date}</td>
+                        <td>${day.total}</td>
+                        <td>${day.completed}</td>
+                        <td>${day.pending}</td>
+                        <td>${day.cancelled}</td>
+                        <td>${rate}%</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/staff.html';
+        }
+    </script>
+</body>
+</html>

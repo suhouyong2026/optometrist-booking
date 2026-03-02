@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - 预约记录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .login-card {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .wechat-login-btn {
+            background: #07C160;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            gap: 10px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .user-details h2 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .user-details p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .booking-item {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .booking-item.completed {
+            border-color: #28a745;
+            background-color: #f8f9fa;
+        }
+        
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .booking-serial {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .booking-status {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #ffc107;
+            color: white;
+        }
+        
+        .status-completed {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .booking-info {
+            margin-bottom: 15px;
+        }
+        
+        .booking-info p {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .booking-qr {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .qr-code {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 10px;
+        }
+        
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .back-home {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .back-home a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>个人中心</h1>
+    </div>
+    
+    <div class="container">
+        <!-- 登录状态 -->
+        <div id="loginSection" class="card login-card">
+            <h2>查看预约记录</h2>
+            <p>请使用微信登录查看您的预约记录</p>
+            <button class="wechat-login-btn" onclick="loginWithWechat()">
+                <span>🔒</span>
+                微信登录
+            </button>
+        </div>
+        
+        <!-- 用户信息和预约记录 -->
+        <div id="userSection" style="display: none;">
+            <div class="card">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h2 id="userName">用户</h2>
+                        <p id="userPhone">未设置</p>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">退出</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 15px;">我的预约记录</h3>
+                <div id="bookingList">
+                    <div class="empty-state">
+                        暂无预约记录
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="back-home">
+            <a href="/">返回首页</a>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+        });
+        
+        // 检查登录状态
+        function checkLoginStatus() {
+            const userStr = localStorage.getItem('customerUser');
+            if (userStr) {
+                currentUser = JSON.parse(userStr);
+                showUserSection();
+                loadBookings();
+            } else {
+                showLoginSection();
+            }
+        }
+        
+        // 显示登录区域
+        function showLoginSection() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('userSection').style.display = 'none';
+        }
+        
+        // 显示用户区域
+        function showUserSection() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'block';
+            
+            // 更新用户信息
+            document.getElementById('userName').textContent = currentUser.name || '用户';
+            document.getElementById('userPhone').textContent = currentUser.phone || '未设置';
+            document.getElementById('userAvatar').textContent = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
+        }
+        
+        // 微信登录
+        function loginWithWechat() {
+            // 模拟微信登录
+            // 实际项目中需要集成微信网页授权
+            // 这里使用模拟数据进行测试
+            const mockUser = {
+                id: 'wechat_' + Math.random().toString(36).substr(2, 9),
+                name: '测试用户',
+                phone: '13800138000',
+                avatar: ''
+            };
+            
+            localStorage.setItem('customerUser', JSON.stringify(mockUser));
+            currentUser = mockUser;
+            showUserSection();
+            loadBookings();
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('customerUser');
+            currentUser = null;
+            showLoginSection();
+        }
+        
+        // 加载预约记录
+        async function loadBookings() {
+            if (!currentUser || !currentUser.phone) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/customer/bookings?phone=${currentUser.phone}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderBookings(result.bookings);
+                }
+            } catch (error) {
+                console.error('加载预约记录失败:', error);
+            }
+        }
+        
+        // 渲染预约记录
+        function renderBookings(bookings) {
+            const bookingList = document.getElementById('bookingList');
+            
+            if (bookings.length === 0) {
+                bookingList.innerHTML = `
+                    <div class="empty-state">
+                        暂无预约记录
+                    </div>
+                `;
+                return;
+            }
+            
+            bookingList.innerHTML = bookings.map(booking => `
+                <div class="booking-item ${booking.status === 'completed' ? 'completed' : ''}">
+                    <div class="booking-header">
+                        <span class="booking-serial">${booking.serialNumber}</span>
+                        <span class="booking-status status-${booking.status}">
+                            ${getStatusText(booking.status)}
+                        </span>
+                    </div>
+                    <div class="booking-info">
+                        <p><strong>预约时间：</strong>${booking.date} ${booking.timeSlot}</p>
+                        <p><strong>姓名：</strong>${booking.customerName}</p>
+                        <p><strong>年龄：</strong>${booking.age}</p>
+                        <p><strong>电话：</strong>${booking.phone}</p>
+                        <p><strong>预约时间：</strong>${formatDateTime(booking.createdAt)}</p>
+                    </div>
+                    ${booking.status !== 'completed' ? `
+                        <div class="booking-qr">
+                            <div class="qr-code">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(JSON.stringify({serialNumber: booking.serialNumber, id: booking.id}))}" alt="预约二维码">
+                            </div>
+                            <p style="font-size: 12px; color: #666;">请保存此二维码，验光时出示</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+        
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待核销',
+                'completed': '已核销',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+        
+        // 格式化日期时间
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+        }
+    </script>
+</body>
+</html>
