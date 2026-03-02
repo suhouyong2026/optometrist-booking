@@ -351,7 +351,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@cloudbase/js-sdk@1.7.1/dist/index.min.js"></script>
+    <script src="https://imgcache.qq.com/qcloud/cloudbase-js-sdk/1.7.1/cloudbase.js"></script>
     <script>
         // 全局变量
         let selectedDate = '';
@@ -365,20 +365,24 @@
         // 初始化云开发
         async function initCloudBase() {
             try {
+                console.log('开始初始化云开发...');
+                
                 app = cloudbase.init({
-                    envId: 'suhouyong2026-5gq178it64857137',
-                    credentials: {
-                        anonymous: true
-                    }
+                    envId: 'suhouyong2026-5gq178it64857137'
                 });
+                
+                console.log('云开发初始化完成，开始匿名登录...');
                 
                 // 匿名登录
                 await app.auth().anonymousSignIn();
+                console.log('匿名登录成功');
                 
                 db = app.database();
                 console.log('云开发初始化成功，已匿名登录');
             } catch (error) {
                 console.error('云开发初始化失败:', error);
+                console.error('错误详情:', error.message);
+                console.error('错误堆栈:', error.stack);
                 showError('初始化失败：' + error.message);
             }
         }
