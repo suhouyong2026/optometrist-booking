@@ -247,18 +247,31 @@
             color: #666;
         }
         
-        .wechat-login-btn {
-            background: #07C160;
+        .phone-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 30px;
             border-radius: 8px;
             font-size: 18px;
             font-weight: 500;
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
         }
         
         @media (max-width: 480px) {
@@ -285,16 +298,14 @@
     <div class="error-message" id="errorMessage"></div>
     
     <!-- 登录提示 -->
-    <div class="form-container login-prompt" id="loginPrompt" style="display: none;">
-        <h2>请先登录</h2>
-        <p>登录后才能预约验光服务</p>
-        <button class="wechat-login-btn" onclick="loginWithWechat()">
-            <span>🔒</span>
-            微信登录
-        </button>
+    <div class="form-container login-prompt" id="loginPrompt">
+        <h2>欢迎预约验光</h2>
+        <p>请输入手机号码开始预约</p>
+        <input type="tel" id="loginPhone" class="phone-input" placeholder="请输入手机号码" maxlength="11">
+        <button class="login-btn" onclick="loginWithPhone()">登录并预约</button>
     </div>
     
-    <div class="form-container" id="formContainer">
+    <div class="form-container" id="formContainer" style="display: none;">
         <div class="form-group">
             <label for="customerName">姓名 *</label>
             <input type="text" id="customerName" required placeholder="请输入您的姓名">
@@ -350,19 +361,14 @@
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            checkLoginStatus();
-        });
-        
-        // 检查登录状态
-        function checkLoginStatus() {
+            // 检查是否已登录
             const userStr = localStorage.getItem('customerUser');
             if (userStr) {
                 currentUser = JSON.parse(userStr);
+                showBookingForm();
                 loadAvailableDates();
-            } else {
-                showLoginPrompt();
             }
-        }
+        });
         
         // 显示登录提示
         function showLoginPrompt() {
@@ -376,35 +382,32 @@
             document.getElementById('formContainer').style.display = 'block';
         }
         
-        // 微信登录
-        async function loginWithWechat() {
-            try {
-                // 调用后端 API 模拟微信登录
-                const response = await fetch('/api/wechat/login');
-                const result = await response.json();
-                
-                if (result.success) {
-                    localStorage.setItem('customerUser', JSON.stringify(result.user));
-                    currentUser = result.user;
-                    showBookingForm();
-                    loadAvailableDates();
-                } else {
-                    showError('登录失败，请重试');
-                }
-            } catch (error) {
-                console.error('微信登录失败:', error);
-                // 如果 API 调用失败，使用本地模拟（用于测试）
-                const mockUser = {
-                    id: 'wechat_' + Math.random().toString(36).substr(2, 9),
-                    name: '测试用户',
-                    phone: '13800138000',
-                    avatar: ''
-                };
-                localStorage.setItem('customerUser', JSON.stringify(mockUser));
-                currentUser = mockUser;
-                showBookingForm();
-                loadAvailableDates();
+        // 手机号登录
+        function loginWithPhone() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            
+            if (!phone || phone.length !== 11) {
+                showError('请输入正确的 11 位手机号码');
+                return;
             }
+            
+            // 保存手机号到本地
+            const user = {
+                id: 'phone_' + phone,
+                phone: phone
+            };
+            
+            localStorage.setItem('customerUser', JSON.stringify(user));
+            currentUser = user;
+            showBookingForm();
+            loadAvailableDates();
+        }
+        
+        // 退出登录（用于测试）
+        function logout() {
+            localStorage.removeItem('customerUser');
+            currentUser = null;
+            showLoginPrompt();
         }
 
         // 加载可预约日期
