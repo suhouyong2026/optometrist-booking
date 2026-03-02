@@ -250,15 +250,18 @@ app.get('/api/time-slots/:date', (req, res) => {
     return;
   }
   
-  // 生成 9:00-18:00 的时间段
+  // 生成 9:00-18:00 的时间段（格式：9:00-10:00, 10:00-11:00）
   const slots = [];
   for (let hour = 9; hour < 18; hour++) {
-    const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
-    const slotKey = `${date}_${timeSlot}`;
+    const startTime = `${hour.toString().padStart(2, '0')}:00`;
+    const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+    const timeSlot = `${startTime}-${endTime}`;
+    const slotKey = `${date}_${startTime}`;
     const booked = data.timeSlots[slotKey] || 0;
     
     slots.push({
       time: timeSlot,
+      startTime: startTime,
       total: 2,
       booked,
       available: booked < 2
@@ -273,8 +276,9 @@ app.post('/api/bookings', async (req, res) => {
   const { customerName, age, phone, date, timeSlot } = req.body;
   const data = readData();
   
-  // 检查时间段是否可用
-  const slotKey = `${date}_${timeSlot}`;
+  // 从时间段提取开始时间（格式：9:00-10:00 -> 09:00）
+  const startTime = timeSlot.split('-')[0];
+  const slotKey = `${date}_${startTime}`;
   const booked = data.timeSlots[slotKey] || 0;
   
   if (booked >= 2) {
