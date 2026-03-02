@@ -13,23 +13,8 @@
       "installDependency": true
     }
   ],
-  "framework": {
-    "name": "booking-app",
-    "plugins": {
-      "client": {
-        "use": "@cloudbase/framework-plugin-website",
-        "inputs": {
-          "buildCommand": "echo 'no build'",
-          "outputPath": ".",
-          "cloudBasePath": "/",
-          "routes": [
-            {
-              "path": "/api/*",
-              "function": "booking-system"
-            }
-          ]
-        }
-      }
-    }
+  "hosting": {
+    "localPath": ".",
+    "cloudPath": "/"
   }
 }
