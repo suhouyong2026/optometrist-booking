@@ -232,6 +232,35 @@
             display: none;
         }
         
+        .login-prompt {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .login-prompt h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .login-prompt p {
+            margin-bottom: 30px;
+            color: #666;
+        }
+        
+        .wechat-login-btn {
+            background: #07C160;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
         @media (max-width: 480px) {
             .date-grid {
                 grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -256,10 +285,13 @@
     <div class="error-message" id="errorMessage"></div>
     
     <!-- 登录提示 -->
-    <div class="form-container" id="loginPrompt" style="display: none;">
-        <h2 style="text-align: center; margin-bottom: 30px;">请先登录</h2>
-        <p style="text-align: center; margin-bottom: 30px;">登录后才能预约验光服务</p>
-        <button class="submit-btn" onclick="loginWithWechat()">微信登录</button>
+    <div class="form-container login-prompt" id="loginPrompt" style="display: none;">
+        <h2>请先登录</h2>
+        <p>登录后才能预约验光服务</p>
+        <button class="wechat-login-btn" onclick="loginWithWechat()">
+            <span>🔒</span>
+            微信登录
+        </button>
     </div>
     
     <div class="form-container" id="formContainer">
@@ -345,21 +377,34 @@
         }
         
         // 微信登录
-        function loginWithWechat() {
-            // 模拟微信登录
-            // 实际项目中需要集成微信网页授权
-            // 这里使用模拟数据进行测试
-            const mockUser = {
-                id: 'wechat_' + Math.random().toString(36).substr(2, 9),
-                name: '测试用户',
-                phone: '13800138000',
-                avatar: ''
-            };
-            
-            localStorage.setItem('customerUser', JSON.stringify(mockUser));
-            currentUser = mockUser;
-            showBookingForm();
-            loadAvailableDates();
+        async function loginWithWechat() {
+            try {
+                // 调用后端 API 模拟微信登录
+                const response = await fetch('/api/wechat/login');
+                const result = await response.json();
+                
+                if (result.success) {
+                    localStorage.setItem('customerUser', JSON.stringify(result.user));
+                    currentUser = result.user;
+                    showBookingForm();
+                    loadAvailableDates();
+                } else {
+                    showError('登录失败，请重试');
+                }
+            } catch (error) {
+                console.error('微信登录失败:', error);
+                // 如果 API 调用失败，使用本地模拟（用于测试）
+                const mockUser = {
+                    id: 'wechat_' + Math.random().toString(36).substr(2, 9),
+                    name: '测试用户',
+                    phone: '13800138000',
+                    avatar: ''
+                };
+                localStorage.setItem('customerUser', JSON.stringify(mockUser));
+                currentUser = mockUser;
+                showBookingForm();
+                loadAvailableDates();
+            }
         }
 
         // 加载可预约日期
