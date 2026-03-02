@@ -1,0 +1,14 @@
+{
+  "name": "booking-system",
+  "version": "1.0.0",
+  "description": "验光师预约系统云函数",
+  "main": "index.js",
+  "dependencies": {
+    "tcb-admin-node": "^1.23.0",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  }
+}
