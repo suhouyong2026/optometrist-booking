@@ -366,12 +366,20 @@
         async function initCloudBase() {
             try {
                 app = cloudbase.init({
-                    envId: 'suhouyong2026-5gq178it64857137'
+                    envId: 'suhouyong2026-5gq178it64857137',
+                    credentials: {
+                        anonymous: true
+                    }
                 });
+                
+                // 匿名登录
+                await app.auth().anonymousSignIn();
+                
                 db = app.database();
-                console.log('云开发初始化成功');
+                console.log('云开发初始化成功，已匿名登录');
             } catch (error) {
                 console.error('云开发初始化失败:', error);
+                showError('初始化失败：' + error.message);
             }
         }
 
