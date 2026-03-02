@@ -4,7 +4,26 @@ const QRCode = require('qrcode');
 
 // 云函数入口
 exports.main = async (event, context) => {
-  const { path, method, body, queryStringParameters, headers } = event;
+  console.log('收到请求:', JSON.stringify(event));
+  
+  // 兼容不同的触发方式
+  let path = event.path || '/';
+  let method = event.method || 'GET';
+  let body = event.body || {};
+  let queryStringParameters = event.queryStringParameters || {};
+  let headers = event.headers || {};
+  
+  // 如果是 HTTP 访问服务，可能需要从 event 中提取路径
+  if (event.requestContext && event.requestContext.path) {
+    path = event.requestContext.path;
+  }
+  
+  // 处理访问路径前缀
+  if (path.startsWith('/function')) {
+    path = path.replace('/function', '') || '/';
+  }
+  
+  console.log('处理后的路径:', path, '方法:', method);
   
   // 初始化云数据库
   const app = cloud.init({
