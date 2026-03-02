@@ -114,6 +114,36 @@ function generateSerialNumber(date) {
 // 初始化数据
 initData();
 
+// 静态文件服务
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
+
+// 根路径
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
+
+// 其他静态页面路由
+app.get('/profile.html', (req, res) => {
+  res.sendFile(path.join(publicPath, 'profile.html'));
+});
+
+app.get('/staff.html', (req, res) => {
+  res.sendFile(path.join(publicPath, 'staff.html'));
+});
+
+app.get('/staff/dashboard.html', (req, res) => {
+  res.sendFile(path.join(publicPath, 'staff', 'dashboard.html'));
+});
+
+app.get('/optometrist/dashboard.html', (req, res) => {
+  res.sendFile(path.join(publicPath, 'optometrist', 'dashboard.html'));
+});
+
+app.get('/admin/dashboard.html', (req, res) => {
+  res.sendFile(path.join(publicPath, 'admin', 'dashboard.html'));
+});
+
 // API 路由
 
 // 用户登录
