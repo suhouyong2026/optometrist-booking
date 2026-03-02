@@ -351,7 +351,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://unpkg.com/@cloudbase/js-sdk@1.7.1/dist/index.min.js"></script>
     <script>
         // 全局变量
         let selectedDate = '';
@@ -359,37 +358,9 @@
         let availableDates = [];
         let availableSlots = [];
         let currentUser = null;
-        let db = null;
-        let app = null;
-
-        // 初始化云开发
-        async function initCloudBase() {
-            try {
-                console.log('开始初始化云开发...');
-                
-                app = cloudbase.init({
-                    envId: 'suhouyong2026-5gq178it64857137'
-                });
-                
-                console.log('云开发初始化完成，开始匿名登录...');
-                
-                // 匿名登录
-                await app.auth().anonymousSignIn();
-                console.log('匿名登录成功');
-                
-                db = app.database();
-                console.log('云开发初始化成功，已匿名登录');
-            } catch (error) {
-                console.error('云开发初始化失败:', error);
-                console.error('错误详情:', error.message);
-                console.error('错误堆栈:', error.stack);
-                showError('初始化失败：' + error.message);
-            }
-        }
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            initCloudBase();
             // 检查是否已登录
             const userStr = localStorage.getItem('customerUser');
             if (userStr) {
@@ -445,45 +416,16 @@
             hideError();
             
             try {
-                // 从 shifts 表查询有班次的日期
-                const shiftsResult = await db.collection('shifts').get();
-                const allDates = shiftsResult.data || [];
+                const response = await fetch('/api/available-dates');
+                const result = await response.json();
                 
-                // 获取今天的日期
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                // 过滤出未来的日期，并检查预约数量
-                availableDates = [];
-                for (const shift of allDates) {
-                    const shiftDate = new Date(shift.date);
-                    if (shiftDate >= today) {
-                        // 查询这一天的预约数量
-                        const bookingsResult = await db.collection('bookings')
-                            .where({
-                                date: shift.date,
-                                status: 'confirmed'
-                            })
-                            .count();
-                        
-                        const totalSlots = shift.slots || 2;
-                        const bookedSlots = bookingsResult.total || 0;
-                        
-                        availableDates.push({
-                            date: shift.date,
-                            available: bookedSlots < totalSlots,
-                            total: totalSlots,
-                            booked: bookedSlots
-                        });
-                    }
+                if (result.success) {
+                    availableDates = result.dates;
+                    renderDateGrid();
+                } else {
+                    showError(result.message || '加载日期失败');
                 }
-                
-                // 按日期排序
-                availableDates.sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                renderDateGrid();
             } catch (error) {
-                console.error('加载日期失败:', error);
                 showError('网络错误，请稍后重试');
             } finally {
                 showLoading(false);
@@ -533,48 +475,18 @@
             hideError();
             
             try {
-                // 查询这一天的班次
-                const shiftResult = await db.collection('shifts')
-                    .where({ date: date })
-                    .get();
+                const response = await fetch(`/api/time-slots/${date}`);
+                const result = await response.json();
                 
-                if (shiftResult.data && shiftResult.data.length > 0) {
-                    const shift = shiftResult.data[0];
-                    const totalSlots = shift.slots || 2;
-                    
-                    // 查询已预约的记录
-                    const bookingsResult = await db.collection('bookings')
-                        .where({
-                            date: date,
-                            status: 'confirmed'
-                        })
-                        .get();
-                    
-                    const bookedTimes = bookingsResult.data.map(b => b.time);
-                    
-                    // 生成时间段（9:00-10:00, 10:00-11:00, ...）
-                    availableSlots = [];
-                    for (let hour = 9; hour < 18; hour++) {
-                        const time = `${hour}:00-${hour + 1}:00`;
-                        const isBooked = bookedTimes.includes(time);
-                        const remainingSlots = totalSlots - bookedTimes.filter(t => t === time).length;
-                        
-                        availableSlots.push({
-                            time: time,
-                            available: remainingSlots > 0,
-                            total: totalSlots,
-                            booked: bookedTimes.filter(t => t === time).length
-                        });
-                    }
-                    
+                if (result.success) {
+                    availableSlots = result.slots;
                     renderTimeGrid();
                     document.getElementById('submitBtn').disabled = false;
                 } else {
-                    showError('该日期不可预约');
+                    showError(result.message || '该日期不可预约');
                     document.getElementById('submitBtn').disabled = true;
                 }
             } catch (error) {
-                console.error('加载时间段失败:', error);
                 showError('网络错误，请稍后重试');
                 document.getElementById('submitBtn').disabled = true;
             } finally {
@@ -628,16 +540,6 @@
             return `${month}/${day}\n${weekday}`;
         }
 
-        // 生成二维码
-        async function generateQRCode(data) {
-            const qrData = JSON.stringify(data);
-            return await QRCode.toDataURL(qrData, {
-                width: 200,
-                margin: 2,
-                errorCorrectionLevel: 'M'
-            });
-        }
-
         // 提交预约
         document.getElementById('submitBtn').addEventListener('click', async function() {
             const customerName = document.getElementById('customerName').value.trim();
@@ -658,41 +560,35 @@
             hideError();
             
             try {
-                // 生成预约数据
-                const serialNumber = 'BK' + Date.now();
-                const bookingData = {
-                    serialNumber: serialNumber,
-                    customerName: customerName,
-                    age: parseInt(age),
-                    phone: phone,
-                    date: selectedDate,
-                    time: selectedTime,
-                    status: 'confirmed',
-                    createdAt: new Date().toISOString(),
-                    verified: false
-                };
-                
-                // 添加到数据库
-                await db.collection('bookings').add(bookingData);
-                
-                // 生成二维码
-                const qrCodeDataUrl = await generateQRCode({
-                    serialNumber: serialNumber,
-                    customerName: customerName,
-                    date: selectedDate,
-                    time: selectedTime
+                const response = await fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customerName,
+                        age: parseInt(age),
+                        phone,
+                        date: selectedDate,
+                        timeSlot: selectedTime
+                    })
                 });
                 
-                // 显示结果
-                document.getElementById('formContainer').style.display = 'none';
-                document.getElementById('resultContainer').style.display = 'block';
+                const result = await response.json();
                 
-                document.getElementById('qrCodeImage').src = qrCodeDataUrl;
-                document.getElementById('serialNumber').textContent = serialNumber;
-                document.getElementById('bookingTime').textContent = 
-                    `${selectedDate} ${selectedTime}`;
+                if (result.success) {
+                    // 显示结果
+                    document.getElementById('formContainer').style.display = 'none';
+                    document.getElementById('resultContainer').style.display = 'block';
+                    
+                    document.getElementById('qrCodeImage').src = result.booking.qrCode;
+                    document.getElementById('serialNumber').textContent = result.booking.serialNumber;
+                    document.getElementById('bookingTime').textContent = 
+                        `${result.booking.date} ${result.booking.timeSlot}`;
+                } else {
+                    showError(result.message || '预约失败');
+                }
             } catch (error) {
-                console.error('预约失败:', error);
                 showError('网络错误，请稍后重试');
             } finally {
                 showLoading(false);
