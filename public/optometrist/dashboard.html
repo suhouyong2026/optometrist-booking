@@ -301,56 +301,6 @@
                     <button class="verify-btn" onclick="verifyBooking()">验证</button>
                 </div>
                 
-                <!-- 扫码模态框 -->
-                <div id="scanModal" style="
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0,0,0,0.8);
-                    display: none;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 1000;
-                ">
-                    <div style="
-                        background: white;
-                        padding: 20px;
-                        border-radius: 10px;
-                        width: 90%;
-                        max-width: 400px;
-                        text-align: center;
-                    ">
-                        <h3 style="margin-bottom: 20px;">扫码验证</h3>
-                        <div id="scanArea" style="
-                            width: 300px;
-                            height: 300px;
-                            margin: 0 auto 20px;
-                            border: 2px solid #667eea;
-                            border-radius: 10px;
-                            position: relative;
-                        ">
-                            <video id="scanVideo" style="
-                                width: 100%;
-                                height: 100%;
-                                object-fit: cover;
-                            "></video>
-                        </div>
-                        <button onclick="closeScanModal()" style="
-                            padding: 10px 20px;
-                            background: #667eea;
-                            color: white;
-                            border: none;
-                            border-radius: 5px;
-                            cursor: pointer;
-                        ">
-                            关闭
-                        </button>
-                    </div>
-                </div>
-                
                 <div class="verify-result" id="verifyResult">
                     <div class="icon" id="resultIcon"></div>
                     <div class="message" id="resultMessage"></div>
@@ -361,12 +311,64 @@
         </div>
     </div>
 
+    <!-- 扫码模态框 -->
+    <div id="scanModal" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    ">
+        <div style="
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        ">
+            <h3 style="margin-bottom: 20px;">扫码验证</h3>
+            <div id="scanArea" style="
+                width: 300px;
+                height: 300px;
+                margin: 0 auto 20px;
+                border: 2px solid #667eea;
+                border-radius: 10px;
+                position: relative;
+                overflow: hidden;
+            ">
+                <video id="scanVideo" style="
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                "></video>
+            </div>
+            <button onclick="closeScanModal()" style="
+                padding: 10px 20px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            ">
+                关闭
+            </button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         let currentUser = null;
         let selectedDates = [];
         let existingShifts = [];
         let currentVerifySerial = null;
+        let scanInterval = null;
         
         // 检查登录状态
         function checkAuth() {
@@ -434,7 +436,7 @@
             
             const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
             
-            // 添加空白格子（上个月的）
+            // 添加空白格子
             for (let i = 0; i < startDay; i++) {
                 const emptyCell = document.createElement('div');
                 emptyCell.className = 'calendar-day';
@@ -456,12 +458,10 @@
                     <div class="day-label">${weekday}</div>
                 `;
                 
-                // 检查是否有班次
                 if (existingShifts.includes(dateStr)) {
                     dayCell.classList.add('has-shift');
                 }
                 
-                // 检查是否已选中
                 if (selectedDates.includes(dateStr)) {
                     dayCell.classList.add('selected');
                 }
@@ -508,7 +508,6 @@
                     messageEl.textContent = '班次保存成功！';
                     messageEl.style.display = 'block';
                     
-                    // 重新加载
                     setTimeout(() => {
                         loadCalendar();
                         messageEl.style.display = 'none';
@@ -622,92 +621,89 @@
         }
         
         // 扫码功能
-        let scanner = null;
-        
-        // 打开扫码模态框
         function scanQRCode() {
             const modal = document.getElementById('scanModal');
             modal.style.display = 'flex';
             
-            // 初始化扫码
-            initScanner();
+            setTimeout(() => initScanner(), 100);
         }
         
-        // 关闭扫码模态框
         function closeScanModal() {
             const modal = document.getElementById('scanModal');
             modal.style.display = 'none';
             
-            // 停止摄像头
+            if (scanInterval) {
+                clearInterval(scanInterval);
+                scanInterval = null;
+            }
+            
             const video = document.getElementById('scanVideo');
             if (video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
             }
         }
         
-        // 初始化扫码器
         function initScanner() {
             const video = document.getElementById('scanVideo');
             const canvas = document.createElement('canvas');
             
-            // 请求摄像头权限
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     video.srcObject = stream;
                     video.play();
                     
-                    // 开始识别
-                    requestAnimationFrame(() => scanFrame(video, canvas));
+                    video.onloadedmetadata = () => {
+                        startScanning(video, canvas);
+                    };
                 })
                 .catch(err => {
+                    console.error('摄像头启动失败:', err);
                     alert('无法访问摄像头，请检查权限设置');
                     closeScanModal();
                 });
         }
         
-        // 扫描帧
-        function scanFrame(video, canvas) {
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+        function startScanning(video, canvas) {
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
             
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 转换为灰度图像进行识别
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = decodeQRCode(imageData);
-            
-            if (code) {
-                try {
-                    const qrData = JSON.parse(code);
-                    if (qrData.serialNumber) {
-                        document.getElementById('serialNumberInput').value = qrData.serialNumber;
-                        closeScanModal();
-                        verifyBooking();
+            scanInterval = setInterval(() => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    if (typeof jsQR === 'undefined') {
+                        console.error('jsQR 库未加载');
                         return;
                     }
-                } catch (e) {
-                    // 不是有效的二维码数据
+                    
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert'
+                    });
+                    
+                    if (code) {
+                        console.log('识别二维码:', code.data);
+                        try {
+                            const qrData = JSON.parse(code.data);
+                            if (qrData.serialNumber) {
+                                document.getElementById('serialNumberInput').value = qrData.serialNumber;
+                                closeScanModal();
+                                setTimeout(() => verifyBooking(), 500);
+                            }
+                        } catch (e) {
+                            console.log('二维码格式不正确');
+                        }
+                    }
                 }
-            }
-            
-            // 继续扫描
-            requestAnimationFrame(() => scanFrame(video, canvas));
+            }, 100);
         }
         
-        // 使用 jsQR 库解码二维码
-        function decodeQRCode(imageData) {
-            try {
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: 'dontInvert'
-                });
-                return code ? code.data : null;
-            } catch (error) {
-                return null;
-            }
-        }
-        
-        // 退出登录
         function logout() {
             localStorage.removeItem('user');
             window.location.href = '/staff.html';
