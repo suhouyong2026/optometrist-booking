@@ -3,13 +3,30 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const QRCode = require('qrcode');
-const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
+const cloud = require('tcb-admin-node');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 检测是否为生产环境（Vercel）
-const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+// 微信配置
+const WECHAT_APPID = process.env.WECHAT_APPID || 'YOUR_WECHAT_APPID';
+const WECHAT_SECRET = process.env.WECHAT_SECRET || 'YOUR_WECHAT_SECRET';
+
+// 腾讯云环境 ID
+const TENCENT_ENV_ID = process.env.TENCENT_ENV_ID || 'suhouyong2026-5gq178it64857137';
+
+// 初始化腾讯云开发
+let db = null;
+try {
+  const app = cloud.init({
+    env: TENCENT_ENV_ID
+  });
+  db = app.database();
+  console.log('腾讯云开发初始化成功');
+} catch (error) {
+  console.error('腾讯云开发初始化失败:', error.message);
+}
 
 // 中间件
 app.use(cors({
@@ -19,100 +36,6 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// 内存数据存储（用于生产环境）
-let inMemoryData = {
-  users: [
-    { 
-      id: '1', 
-      username: 'staff', 
-      password: 'staff123', 
-      role: 'staff',
-      name: '和平路总店员工'
-    },
-    { 
-      id: '2', 
-      username: 'xuxiaolong', 
-      password: 'xxl2024', 
-      role: 'optometrist',
-      name: '许晓龙'
-    },
-    { 
-      id: '3', 
-      username: 'admin', 
-      password: 'admin2024', 
-      role: 'admin',
-      name: '管理员'
-    }
-  ],
-  shifts: [],
-  bookings: [],
-  timeSlots: {}
-};
-
-// 数据文件路径
-const DATA_FILE = path.join(__dirname, 'data', 'database.json');
-
-// 初始化数据
-function initData() {
-  if (isProduction) {
-    console.log('生产环境：使用内存存储');
-    return;
-  }
-  
-  const fs = require('fs');
-  const dataDir = path.join(__dirname, 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryData, null, 2));
-  }
-}
-
-// 读取数据
-function readData() {
-  if (isProduction) {
-    return inMemoryData;
-  }
-  
-  try {
-    const fs = require('fs');
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('读取数据失败:', error);
-    return inMemoryData;
-  }
-}
-
-// 写入数据
-function writeData(data) {
-  if (isProduction) {
-    inMemoryData = data;
-    return true;
-  }
-  
-  try {
-    const fs = require('fs');
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    return true;
-  } catch (error) {
-    console.error('写入数据失败:', error);
-    return false;
-  }
-}
-
-// 生成唯一流水号：YYMMDD + 4 位随机数
-function generateSerialNumber(date) {
-  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `${dateStr}${random}`;
-}
-
-// 初始化数据
-initData();
 
 // 静态文件服务
 const publicPath = path.join(__dirname, 'public');
@@ -144,374 +67,645 @@ app.get('/admin/dashboard.html', (req, res) => {
   res.sendFile(path.join(publicPath, 'admin', 'dashboard.html'));
 });
 
-// API 路由
+app.get('/wechat-auth.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'wechat-auth.html'));
+});
 
-// 用户登录
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const data = readData();
+// ==================== 微信 OAuth2.0 相关接口 ====================
+
+// 微信授权回调 - 获取 code
+app.get('/api/wechat/auth', (req, res) => {
+  const { code } = req.query;
   
-  const user = data.users.find(u => u.username === username && u.password === password);
+  if (!code) {
+    // 重定向到微信授权页
+    const redirectUri = encodeURIComponent(`${process.env.BASE_URL || 'http://localhost:3000'}/api/wechat/callback`);
+    const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WECHAT_APPID}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=STATE#wechat_redirect`;
+    res.redirect(authUrl);
+    return;
+  }
   
-  if (user) {
-    res.json({ 
-      success: true, 
-      user: { 
-        id: user.id, 
-        username: user.username, 
-        role: user.role,
-        name: user.name
-      } 
-    });
-  } else {
-    res.json({ success: false, message: '用户名或密码错误' });
+  res.redirect(`/api/wechat/callback?code=${code}`);
+});
+
+// 微信授权回调 - 处理 code
+app.get('/api/wechat/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  try {
+    // 1. 使用 code 换取 access_token 和 openid
+    const tokenUrl = `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${WECHAT_APPID}&secret=${WECHAT_SECRET}&code=${code}&grant_type=authorization_code`;
+    const tokenResponse = await axios.get(tokenUrl);
+    
+    if (tokenResponse.data.errcode) {
+      throw new Error(tokenResponse.data.errmsg);
+    }
+    
+    const { access_token, openid } = tokenResponse.data;
+    
+    // 2. 使用 access_token 和 openid 获取用户信息
+    const userInfoUrl = `https://api.weixin.qq.com/sns/userinfo?access_token=${access_token}&openid=${openid}&lang=zh_CN`;
+    const userInfoResponse = await axios.get(userInfoUrl);
+    
+    if (userInfoResponse.data.errcode) {
+      throw new Error(userInfoResponse.data.errmsg);
+    }
+    
+    const userInfo = userInfoResponse.data;
+    
+    // 3. 保存或更新用户信息到腾讯云数据库
+    const user = await saveWechatUser(openid, userInfo);
+    
+    // 4. 跳转到主页，携带用户信息
+    res.redirect(`/?openid=${openid}&wechat_login=1`);
+    
+  } catch (error) {
+    console.error('微信授权失败:', error);
+    res.redirect('/?error=wechat_auth_failed');
   }
 });
 
-// 获取班次信息
-app.get('/api/shifts', (req, res) => {
-  const data = readData();
-  res.json({ success: true, shifts: data.shifts });
-});
+// 保存微信用户到数据库
+async function saveWechatUser(openid, userInfo) {
+  if (!db) {
+    console.warn('数据库未初始化，使用内存存储');
+    return { openid, ...userInfo };
+  }
+  
+  try {
+    // 查询用户是否已存在
+    const queryResult = await db.collection('users')
+      .where({ openid })
+      .get();
+    
+    if (queryResult.data.length > 0) {
+      // 更新用户信息
+      await db.collection('users')
+        .doc(queryResult.data[0]._id)
+        .update({
+          nickname: userInfo.nickname,
+          avatar: userInfo.headimgurl,
+          lastLoginAt: new Date().toISOString()
+        });
+      
+      return queryResult.data[0];
+    } else {
+      // 创建新用户
+      const user = {
+        openid,
+        nickname: userInfo.nickname,
+        avatar: userInfo.headimgurl,
+        sex: userInfo.sex,
+        city: userInfo.city,
+        province: userInfo.province,
+        country: userInfo.country,
+        role: 'customer',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString()
+      };
+      
+      const result = await db.collection('users').add(user);
+      return { _id: result.id, ...user };
+    }
+  } catch (error) {
+    console.error('保存微信用户失败:', error);
+    return { openid, ...userInfo };
+  }
+}
 
-// 获取某月班次（许晓龙）
-app.get('/api/shifts/:optometristId/:month', (req, res) => {
-  const { optometristId, month } = req.params;
-  const data = readData();
+// 获取用户信息
+app.get('/api/wechat/userinfo', async (req, res) => {
+  const { openid } = req.query;
   
-  const monthShifts = data.shifts.filter(s => 
-    s.optometristId === optometristId && s.date.startsWith(month)
-  );
+  if (!openid) {
+    res.json({ success: false, message: '缺少 openid' });
+    return;
+  }
   
-  res.json({ success: true, shifts: monthShifts });
-});
-
-// 设置班次（许晓龙）
-app.post('/api/shifts', (req, res) => {
-  const { optometristId, dates } = req.body;
-  const data = readData();
-  
-  // 删除该验光师原有班次
-  data.shifts = data.shifts.filter(s => s.optometristId !== optometristId);
-  
-  // 添加新班次
-  dates.forEach(date => {
-    data.shifts.push({
-      id: uuidv4(),
-      date,
-      optometristId
-    });
-  });
-  
-  if (writeData(data)) {
-    res.json({ success: true, message: '班次设置成功' });
-  } else {
-    res.json({ success: false, message: '保存失败' });
+  try {
+    if (!db) {
+      res.json({ 
+        success: true, 
+        user: {
+          openid,
+          nickname: '微信用户',
+          avatar: ''
+        }
+      });
+      return;
+    }
+    
+    const result = await db.collection('users')
+      .where({ openid })
+      .get();
+    
+    if (result.data.length > 0) {
+      res.json({ success: true, user: result.data[0] });
+    } else {
+      res.json({ success: false, message: '用户不存在' });
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    res.json({ success: false, message: error.message });
   }
 });
 
-// 获取可预约日期（未来一个月）
-app.get('/api/available-dates', (req, res) => {
-  const data = readData();
-  const today = new Date();
-  const nextMonth = new Date(today);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  
-  const availableDates = [];
+// ==================== 预约相关接口（对接腾讯云数据库） ====================
+
+// 获取可预约日期
+app.get('/api/available-dates', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const nextMonth = new Date(today);
+    nextMonth.setDate(nextMonth.getDate() + 30);
+    
+    if (!db) {
+      // 内存数据（备用）
+      res.json({ 
+        success: true, 
+        dates: generateMockDates(today, nextMonth)
+      });
+      return;
+    }
+    
+    // 查询班次
+    const shiftsResult = await db.collection('shifts')
+      .where({
+        date: db.command.gte(today.toISOString().slice(0, 10))
+          .and(db.command.lte(nextMonth.toISOString().slice(0, 10)))
+      })
+      .get();
+    
+    const shifts = shiftsResult.data || [];
+    
+    // 生成日期列表
+    const availableDates = [];
+    const currentDate = new Date(today);
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    while (currentDate <= nextMonth) {
+      const dateStr = currentDate.toISOString().slice(0, 10);
+      const hasShift = shifts.some(s => s.date === dateStr);
+      
+      availableDates.push({
+        date: dateStr,
+        available: hasShift,
+        dayOfWeek: currentDate.getDay()
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    res.json({ success: true, dates: availableDates });
+    
+  } catch (error) {
+    console.error('获取可预约日期失败:', error);
+    res.json({ success: false, message: error.message });
+  }
+});
+
+// 生成模拟日期（备用）
+function generateMockDates(today, nextMonth) {
+  const dates = [];
   const currentDate = new Date(today);
-  currentDate.setDate(currentDate.getDate() + 1); // 从明天开始
+  currentDate.setDate(currentDate.getDate() + 1);
   
   while (currentDate <= nextMonth) {
     const dateStr = currentDate.toISOString().slice(0, 10);
-    const hasShift = data.shifts.some(s => s.date === dateStr);
+    // 周末不可约
+    const dayOfWeek = currentDate.getDay();
+    const available = dayOfWeek >= 1 && dayOfWeek <= 5;
     
-    availableDates.push({
+    dates.push({
       date: dateStr,
-      available: hasShift,
-      dayOfWeek: currentDate.getDay()
+      available,
+      dayOfWeek
     });
     
     currentDate.setDate(currentDate.getDate() + 1);
   }
   
-  res.json({ success: true, dates: availableDates });
+  return dates;
+}
+
+// 获取时间段
+app.get('/api/time-slots/:date', async (req, res) => {
+  const { date } = req.params;
+  
+  try {
+    if (!db) {
+      res.json({ 
+        success: true, 
+        slots: generateMockTimeSlots()
+      });
+      return;
+    }
+    
+    // 查询班次
+    const shiftsResult = await db.collection('shifts')
+      .where({ date })
+      .get();
+    
+    if (shiftsResult.data.length === 0) {
+      res.json({ success: false, message: '该日期不可预约', slots: [] });
+      return;
+    }
+    
+    const shift = shiftsResult.data[0];
+    const totalSlots = shift.slots || 2;
+    
+    // 查询已预约记录
+    const bookingsResult = await db.collection('bookings')
+      .where({
+        date: date,
+        status: 'confirmed'
+      })
+      .get();
+    
+    const bookings = bookingsResult.data || [];
+    
+    // 统计每个时间段的预约数量
+    const timeCount = {};
+    bookings.forEach(b => {
+      timeCount[b.time] = (timeCount[b.time] || 0) + 1;
+    });
+    
+    // 生成时间段
+    const slots = [];
+    for (let hour = 9; hour < 18; hour++) {
+      const time = `${hour}:00-${hour + 1}:00`;
+      const booked = timeCount[time] || 0;
+      
+      slots.push({
+        time,
+        available: booked < totalSlots,
+        total: totalSlots,
+        booked
+      });
+    }
+    
+    res.json({ success: true, slots });
+    
+  } catch (error) {
+    console.error('获取时间段失败:', error);
+    res.json({ success: false, message: error.message, slots: generateMockTimeSlots() });
+  }
 });
 
-// 获取时间段及预约情况
-app.get('/api/time-slots/:date', (req, res) => {
-  const { date } = req.params;
-  const data = readData();
-  
-  // 检查该日期是否有班次
-  const hasShift = data.shifts.some(s => s.date === date);
-  
-  if (!hasShift) {
-    res.json({ success: false, message: '该日期不可预约', slots: [] });
-    return;
-  }
-  
-  // 生成 9:00-18:00 的时间段（格式：9:00-10:00, 10:00-11:00）
+// 生成模拟时间段（备用）
+function generateMockTimeSlots() {
   const slots = [];
   for (let hour = 9; hour < 18; hour++) {
-    const startTime = `${hour.toString().padStart(2, '0')}:00`;
-    const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
-    const timeSlot = `${startTime}-${endTime}`;
-    const slotKey = `${date}_${startTime}`;
-    const booked = data.timeSlots[slotKey] || 0;
-    
+    const time = `${hour}:00-${hour + 1}:00`;
     slots.push({
-      time: timeSlot,
-      startTime: startTime,
+      time,
+      available: true,
       total: 2,
-      booked,
-      available: booked < 2
+      booked: 0
     });
   }
-  
-  res.json({ success: true, slots });
-});
+  return slots;
+}
 
 // 创建预约
 app.post('/api/bookings', async (req, res) => {
-  const { customerName, age, phone, date, timeSlot } = req.body;
-  const data = readData();
+  const { customerName, age, phone, date, timeSlot, openid } = req.body;
   
-  // 从时间段提取开始时间（格式：9:00-10:00 -> 09:00）
-  const startTime = timeSlot.split('-')[0];
-  const slotKey = `${date}_${startTime}`;
-  const booked = data.timeSlots[slotKey] || 0;
-  
-  if (booked >= 2) {
-    res.json({ success: false, message: '该时间段已约满' });
-    return;
-  }
-  
-  // 生成预约信息
-  const booking = {
-    id: uuidv4(),
-    serialNumber: generateSerialNumber(new Date()),
-    customerName,
-    age,
-    phone,
-    date,
-    timeSlot,
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
-  
-  data.bookings.push(booking);
-  data.timeSlots[slotKey] = booked + 1;
-  
-  if (writeData(data)) {
+  try {
+    if (!db) {
+      res.json({ 
+        success: false, 
+        message: '数据库未连接'
+      });
+      return;
+    }
+    
+    // 检查该日期是否有班次
+    const shiftsResult = await db.collection('shifts')
+      .where({ date })
+      .get();
+    
+    if (shiftsResult.data.length === 0) {
+      res.json({ success: false, message: '该日期不可预约' });
+      return;
+    }
+    
+    const totalSlots = shiftsResult.data[0].slots || 2;
+    
+    // 查询该时间段已预约数量
+    const countResult = await db.collection('bookings')
+      .where({
+        date,
+        time: timeSlot,
+        status: 'confirmed'
+      })
+      .count();
+    
+    if (countResult.total >= totalSlots) {
+      res.json({ success: false, message: '该时间段已约满' });
+      return;
+    }
+    
+    // 生成流水号
+    const serialNumber = 'BK' + Date.now();
+    
+    // 创建预约记录
+    const booking = {
+      serialNumber,
+      customerName,
+      age: parseInt(age),
+      phone,
+      openid: openid || '',
+      date,
+      time: timeSlot,
+      status: 'confirmed',
+      verified: false,
+      createdAt: new Date().toISOString()
+    };
+    
+    await db.collection('bookings').add(booking);
+    
     // 生成二维码
     const qrData = JSON.stringify({
-      serialNumber: booking.serialNumber,
-      id: booking.id
+      serialNumber,
+      customerName,
+      date,
+      time: timeSlot
     });
     
-    const qrCodeImage = await QRCode.toDataURL(qrData);
+    const qrCode = await QRCode.toDataURL(qrData, {
+      width: 200,
+      margin: 2,
+      errorCorrectionLevel: 'M'
+    });
     
-    res.json({ 
-      success: true, 
-      message: '预约成功',
+    res.json({
+      success: true,
       booking: {
-        ...booking,
-        qrCode: qrCodeImage
+        serialNumber,
+        date,
+        timeSlot,
+        qrCode
       }
     });
-  } else {
-    res.json({ success: false, message: '预约失败' });
+    
+  } catch (error) {
+    console.error('创建预约失败:', error);
+    res.json({ success: false, message: error.message });
   }
-});
-
-// 验证预约（核销）
-app.post('/api/verify', (req, res) => {
-  const { serialNumber } = req.body;
-  const data = readData();
-  
-  const booking = data.bookings.find(b => b.serialNumber === serialNumber);
-  
-  if (!booking) {
-    res.json({ 
-      success: false, 
-      valid: false,
-      message: '未找到该预约信息' 
-    });
-    return;
-  }
-  
-  if (booking.status === 'completed') {
-    res.json({ 
-      success: true, 
-      valid: true,
-      alreadyUsed: true,
-      message: '该预约已核销',
-      booking 
-    });
-    return;
-  }
-  
-  res.json({ 
-    success: true, 
-    valid: true,
-    alreadyUsed: false,
-    message: '预约有效',
-    booking 
-  });
 });
 
 // 获取顾客预约记录
-app.get('/api/customer/bookings', (req, res) => {
-  const { phone } = req.query;
-  const data = readData();
+app.get('/api/customer/bookings', async (req, res) => {
+  const { phone, openid } = req.query;
   
-  let bookings = data.bookings;
-  
-  if (phone) {
-    bookings = bookings.filter(b => b.phone === phone);
+  try {
+    if (!db) {
+      res.json({ success: true, bookings: [] });
+      return;
+    }
+    
+    let query = {};
+    if (openid) {
+      query.openid = openid;
+    } else if (phone) {
+      query.phone = phone;
+    }
+    
+    const result = await db.collection('bookings')
+      .where(query)
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    res.json({ success: true, bookings: result.data || [] });
+    
+  } catch (error) {
+    console.error('获取预约记录失败:', error);
+    res.json({ success: false, message: error.message, bookings: [] });
   }
-  
-  // 按日期排序
-  bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  res.json({ success: true, bookings });
 });
 
 // 核销预约
-app.post('/api/verify/confirm', (req, res) => {
+app.post('/api/verify/confirm', async (req, res) => {
   const { serialNumber } = req.body;
-  const data = readData();
   
-  const bookingIndex = data.bookings.findIndex(b => b.serialNumber === serialNumber);
-  
-  if (bookingIndex === -1) {
-    res.json({ success: false, message: '未找到该预约' });
-    return;
-  }
-  
-  data.bookings[bookingIndex].status = 'completed';
-  data.bookings[bookingIndex].verifiedAt = new Date().toISOString();
-  
-  if (writeData(data)) {
-    res.json({ success: true, message: '核销成功' });
-  } else {
-    res.json({ success: false, message: '核销失败' });
-  }
-});
-
-// 获取预约列表（员工/管理员）
-app.get('/api/bookings', (req, res) => {
-  const { date, status } = req.query;
-  const data = readData();
-  
-  let bookings = data.bookings;
-  
-  if (date) {
-    bookings = bookings.filter(b => b.date === date);
-  }
-  
-  if (status) {
-    bookings = bookings.filter(b => b.status === status);
-  }
-  
-  // 按日期排序
-  bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  res.json({ success: true, bookings });
-});
-
-// 获取统计数据（管理员）
-app.get('/api/statistics', (req, res) => {
-  const { month } = req.query;
-  const data = readData();
-  
-  let bookings = data.bookings;
-  
-  if (month) {
-    bookings = bookings.filter(b => b.date.startsWith(month));
-  }
-  
-  // 按天统计
-  const dailyStats = {};
-  bookings.forEach(booking => {
-    const date = booking.date;
-    if (!dailyStats[date]) {
-      dailyStats[date] = {
-        date,
-        total: 0,
-        completed: 0,
-        pending: 0,
-        cancelled: 0
-      };
+  try {
+    if (!db) {
+      res.json({ success: false, message: '数据库未连接' });
+      return;
     }
-    dailyStats[date].total++;
-    dailyStats[date][booking.status]++;
-  });
-  
-  const summary = {
-    total: bookings.length,
-    completed: bookings.filter(b => b.status === 'completed').length,
-    pending: bookings.filter(b => b.status === 'pending').length,
-    cancelled: bookings.filter(b => b.status === 'cancelled').length
-  };
-  
-  res.json({ 
-    success: true, 
-    summary,
-    dailyStats: Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date))
-  });
-});
-
-// 微信登录相关路由
-app.get('/api/wechat/login', (req, res) => {
-  const { code } = req.query;
-  
-  // 模拟微信登录
-  const mockUser = {
-    id: 'wechat_' + Math.random().toString(36).substr(2, 9),
-    name: '微信用户',
-    phone: '13800138000',
-    avatar: ''
-  };
-  
-  res.json({ 
-    success: true, 
-    user: mockUser 
-  });
-});
-
-// 初始化测试班次（仅用于测试）
-app.post('/api/init-test-shifts', (req, res) => {
-  const data = readData();
-  const today = new Date();
-  
-  // 添加未来 7 天的班次
-  const testDates = [];
-  for (let i = 1; i <= 7; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-    const dateStr = date.toISOString().slice(0, 10);
-    testDates.push(dateStr);
     
-    // 检查是否已存在
-    const exists = data.shifts.some(s => s.date === dateStr && s.optometristId === '2');
-    if (!exists) {
-      data.shifts.push({
-        id: uuidv4(),
-        date: dateStr,
-        optometristId: '2' // 许晓龙
+    const result = await db.collection('bookings')
+      .where({ serialNumber })
+      .get();
+    
+    if (result.data.length === 0) {
+      res.json({ success: false, message: '预约不存在' });
+      return;
+    }
+    
+    const booking = result.data[0];
+    
+    if (booking.verified) {
+      res.json({ success: true, message: '已核销', alreadyUsed: true });
+      return;
+    }
+    
+    await db.collection('bookings')
+      .doc(booking._id)
+      .update({
+        verified: true,
+        verifiedAt: new Date().toISOString(),
+        status: 'completed'
+      });
+    
+    res.json({ success: true, message: '核销成功' });
+    
+  } catch (error) {
+    console.error('核销失败:', error);
+    res.json({ success: false, message: error.message });
+  }
+});
+
+// 获取预约列表
+app.get('/api/bookings', async (req, res) => {
+  const { date, status } = req.query;
+  
+  try {
+    if (!db) {
+      res.json({ success: true, bookings: [] });
+      return;
+    }
+    
+    let query = {};
+    if (date) query.date = date;
+    if (status) query.status = status;
+    
+    const result = await db.collection('bookings')
+      .where(query)
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    res.json({ success: true, bookings: result.data || [] });
+    
+  } catch (error) {
+    console.error('获取预约列表失败:', error);
+    res.json({ success: false, message: error.message, bookings: [] });
+  }
+});
+
+// 获取统计数据
+app.get('/api/statistics', async (req, res) => {
+  const { month } = req.query;
+  
+  try {
+    if (!db) {
+      res.json({ 
+        success: true, 
+        summary: { total: 0, completed: 0, pending: 0 },
+        dailyStats: []
+      });
+      return;
+    }
+    
+    let query = {};
+    if (month) {
+      query.date = db.command.startsWith(month);
+    }
+    
+    const result = await db.collection('bookings')
+      .where(query)
+      .get();
+    
+    const bookings = result.data || [];
+    
+    // 统计数据
+    const summary = {
+      total: bookings.length,
+      completed: bookings.filter(b => b.status === 'completed').length,
+      pending: bookings.filter(b => b.status === 'confirmed').length
+    };
+    
+    // 按天统计
+    const dailyStats = {};
+    bookings.forEach(booking => {
+      const date = booking.date;
+      if (!dailyStats[date]) {
+        dailyStats[date] = { date, total: 0, completed: 0, pending: 0 };
+      }
+      dailyStats[date].total++;
+      if (booking.status === 'completed') dailyStats[date].completed++;
+      else dailyStats[date].pending++;
+    });
+    
+    res.json({
+      success: true,
+      summary,
+      dailyStats: Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date))
+    });
+    
+  } catch (error) {
+    console.error('获取统计数据失败:', error);
+    res.json({ success: false, message: error.message });
+  }
+});
+
+// 设置班次
+app.post('/api/shifts', async (req, res) => {
+  const { optometristId, dates, slots } = req.body;
+  
+  try {
+    if (!db) {
+      res.json({ success: false, message: '数据库未连接' });
+      return;
+    }
+    
+    // 删除该验光师原有班次
+    const existingShifts = await db.collection('shifts')
+      .where({ optometristId })
+      .get();
+    
+    for (const shift of existingShifts.data) {
+      await db.collection('shifts').doc(shift._id).remove();
+    }
+    
+    // 添加新班次
+    for (const date of dates) {
+      await db.collection('shifts').add({
+        optometristId,
+        date,
+        slots: slots || 2,
+        createdAt: new Date().toISOString()
       });
     }
+    
+    res.json({ success: true, message: '班次设置成功' });
+    
+  } catch (error) {
+    console.error('设置班次失败:', error);
+    res.json({ success: false, message: error.message });
   }
+});
+
+// 获取班次
+app.get('/api/shifts/:optometristId/:month', async (req, res) => {
+  const { optometristId, month } = req.params;
   
-  if (writeData(data)) {
-    res.json({ 
-      success: true, 
-      message: '已初始化未来 7 天的测试班次',
-      dates: testDates
-    });
-  } else {
-    res.json({ success: false, message: '初始化失败' });
+  try {
+    if (!db) {
+      res.json({ success: true, shifts: [] });
+      return;
+    }
+    
+    const result = await db.collection('shifts')
+      .where({
+        optometristId,
+        date: db.command.startsWith(month)
+      })
+      .get();
+    
+    res.json({ success: true, shifts: result.data || [] });
+    
+  } catch (error) {
+    console.error('获取班次失败:', error);
+    res.json({ success: false, message: error.message, shifts: [] });
+  }
+});
+
+// 用户登录（后台使用）
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  try {
+    if (!db) {
+      res.json({ success: false, message: '数据库未连接' });
+      return;
+    }
+    
+    const result = await db.collection('users')
+      .where({ username, password, role: db.command.neq('customer') })
+      .get();
+    
+    if (result.data.length > 0) {
+      const user = result.data[0];
+      res.json({
+        success: true,
+        user: {
+          id: user._id,
+          username: user.username,
+          role: user.role,
+          name: user.name
+        }
+      });
+    } else {
+      res.json({ success: false, message: '用户名或密码错误' });
+    }
+    
+  } catch (error) {
+    console.error('登录失败:', error);
+    res.json({ success: false, message: error.message });
   }
 });
 
@@ -519,8 +713,10 @@ app.post('/api/init-test-shifts', (req, res) => {
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
   console.log(`顾客端：http://localhost:${PORT}`);
-  console.log(`员工入口：http://localhost:${PORT}/staff.html`);
-  if (isProduction) {
-    console.log('生产环境模式已启用');
-  }
+  console.log(`微信授权回调地址：http://localhost:${PORT}/api/wechat/callback`);
+  console.log('');
+  console.log('⚠️  请配置环境变量：');
+  console.log('   WECHAT_APPID=你的微信 AppID');
+  console.log('   WECHAT_SECRET=你的微信 AppSecret');
+  console.log('   BASE_URL=你的域名（用于微信回调）');
 });
