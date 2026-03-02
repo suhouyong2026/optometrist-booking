@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
@@ -9,69 +8,94 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 检测是否为生产环境（Vercel）
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
 // 中间件
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static('public'));
+
+// 内存数据存储（用于生产环境）
+let inMemoryData = {
+  users: [
+    { 
+      id: '1', 
+      username: 'staff', 
+      password: 'staff123', 
+      role: 'staff',
+      name: '和平路总店员工'
+    },
+    { 
+      id: '2', 
+      username: 'xuxiaolong', 
+      password: 'xxl2024', 
+      role: 'optometrist',
+      name: '许晓龙'
+    },
+    { 
+      id: '3', 
+      username: 'admin', 
+      password: 'admin2024', 
+      role: 'admin',
+      name: '管理员'
+    }
+  ],
+  shifts: [],
+  bookings: [],
+  timeSlots: {}
+};
 
 // 数据文件路径
 const DATA_FILE = path.join(__dirname, 'data', 'database.json');
 
 // 初始化数据
 function initData() {
+  if (isProduction) {
+    console.log('生产环境：使用内存存储');
+    return;
+  }
+  
+  const fs = require('fs');
   const dataDir = path.join(__dirname, 'data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
   
   if (!fs.existsSync(DATA_FILE)) {
-    const initialData = {
-      users: [
-        { 
-          id: '1', 
-          username: 'staff', 
-          password: 'staff123', 
-          role: 'staff',
-          name: '和平路总店员工'
-        },
-        { 
-          id: '2', 
-          username: 'xuxiaolong', 
-          password: 'xxl2024', 
-          role: 'optometrist',
-          name: '许晓龙'
-        },
-        { 
-          id: '3', 
-          username: 'admin', 
-          password: 'admin2024', 
-          role: 'admin',
-          name: '管理员'
-        }
-      ],
-      shifts: [], // 班次：{ date: '2024-01-15', optometristId: '2' }
-      bookings: [], // 预约：{ id, serialNumber, customerName, age, phone, date, timeSlot, status, createdAt }
-      timeSlots: {} // 时间段预约数：{ '2024-01-15_09:00': 1 }
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+    fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryData, null, 2));
   }
 }
 
 // 读取数据
 function readData() {
+  if (isProduction) {
+    return inMemoryData;
+  }
+  
   try {
+    const fs = require('fs');
     const data = fs.readFileSync(DATA_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error('读取数据失败:', error);
-    return null;
+    return inMemoryData;
   }
 }
 
 // 写入数据
 function writeData(data) {
+  if (isProduction) {
+    inMemoryData = data;
+    return true;
+  }
+  
   try {
+    const fs = require('fs');
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
     return true;
   } catch (error) {
@@ -237,7 +261,7 @@ app.post('/api/bookings', async (req, res) => {
     phone,
     date,
     timeSlot,
-    status: 'pending', // pending, confirmed, cancelled, completed
+    status: 'pending',
     createdAt: new Date().toISOString()
   };
   
@@ -408,11 +432,6 @@ app.get('/api/statistics', (req, res) => {
 app.get('/api/wechat/login', (req, res) => {
   const { code } = req.query;
   
-  // 实际项目中需要：
-  // 1. 使用 code 调用微信 API 获取 openid
-  // 2. 根据 openid 查询或创建用户
-  // 3. 返回用户信息和 token
-  
   // 模拟微信登录
   const mockUser = {
     id: 'wechat_' + Math.random().toString(36).substr(2, 9),
@@ -432,4 +451,7 @@ app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
   console.log(`顾客端：http://localhost:${PORT}`);
   console.log(`员工入口：http://localhost:${PORT}/staff.html`);
+  if (isProduction) {
+    console.log('生产环境模式已启用');
+  }
 });
