@@ -75,15 +75,19 @@
         
         async function handleWechatAuth(code) {
             try {
+                console.log('开始处理授权，code:', code);
                 const response = await fetch(`${API_BASE_URL}/api/wechat/callback?code=${code}`);
                 const result = await response.json();
+                console.log('云函数返回:', result);
                 
                 if (result.success) {
+                    console.log('授权成功，用户信息:', result.user);
                     // 保存用户信息
                     localStorage.setItem('customerUser', JSON.stringify(result.user));
                     // 跳转回首页
                     window.location.href = '/?openid=' + result.user.openid + '&wechat_login=1';
                 } else {
+                    console.error('授权失败:', result.message);
                     alert('授权失败：' + result.message);
                     window.location.href = '/';
                 }
