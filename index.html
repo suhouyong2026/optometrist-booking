@@ -326,7 +326,7 @@
 
     <!-- 微信用户信息 -->
     <div id="userInfo" class="user-info" style="display: none;">
-        <img id="userAvatar" class="user-avatar" src="" alt="头像">
+        <img id="userAvatar" class="user-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="">
         <div class="user-details">
             <div id="userName" class="user-name"></div>
             <div id="userOpenid" class="user-openid"></div>
@@ -483,7 +483,11 @@
         // 显示用户信息
         function showUserInfo(user) {
             document.getElementById('userInfo').style.display = 'flex';
-            document.getElementById('userAvatar').src = user.avatar || '';
+            // 如果有头像则显示，否则使用默认头像
+            const avatarUrl = user.avatar && user.avatar.trim() !== ''
+                ? user.avatar
+                : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (user.openid || 'default');
+            document.getElementById('userAvatar').src = avatarUrl;
             document.getElementById('userName').textContent = user.nickname || '微信用户';
             document.getElementById('userOpenid').textContent = 'ID: ' + user.openid.substr(0, 8) + '...';
             // 显示header退出按钮
