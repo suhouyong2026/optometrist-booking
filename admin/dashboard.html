@@ -578,9 +578,10 @@
             tbody.innerHTML = bookings.map(booking => {
                 const statusClass = booking.status === 'cancelled' ? 'status-cancelled' :
                                    (booking.verified || booking.status === 'completed') ? 'status-completed' : 'status-pending';
+                const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${booking.openid || 'default'}`;
                 const avatarHtml = booking.avatar
-                    ? `<img src="${booking.avatar}" referrerpolicy="no-referrer" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div style="width: 40px; height: 40px; border-radius: 50%; background: #ddd; display: none; align-items: center; justify-content: center; color: #999; font-size: 12px;">无</div>`
-                    : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">无</div>`;
+                    ? `<img src="${booking.avatar}" onerror="this.src='${defaultAvatar}'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
+                    : `<img src="${defaultAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`;
                 return `
                 <tr>
                     <td>${booking.serialNumber}</td>

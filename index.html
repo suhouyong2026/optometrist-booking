@@ -483,11 +483,17 @@
         // 显示用户信息
         function showUserInfo(user) {
             document.getElementById('userInfo').style.display = 'flex';
-            // 如果有头像则显示，否则使用默认头像
-            const avatarUrl = user.avatar && user.avatar.trim() !== ''
-                ? user.avatar
-                : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (user.openid || 'default');
-            document.getElementById('userAvatar').src = avatarUrl;
+            // 设置头像 - 微信头像可能有防盗链，使用默认头像作为后备
+            const avatarImg = document.getElementById('userAvatar');
+            if (user.avatar && user.avatar.trim() !== '') {
+                avatarImg.src = user.avatar;
+                avatarImg.onerror = function() {
+                    // 微信头像加载失败，使用默认头像
+                    this.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (user.openid || 'default');
+                };
+            } else {
+                avatarImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (user.openid || 'default');
+            }
             document.getElementById('userName').textContent = user.nickname || '微信用户';
             document.getElementById('userOpenid').textContent = 'ID: ' + user.openid.substr(0, 8) + '...';
             // 显示header退出按钮
