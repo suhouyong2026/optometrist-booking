@@ -168,6 +168,38 @@
             border-top: 1px solid #eee;
         }
         
+        .booking-actions {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .cancel-btn {
+            margin-top: 15px;
+            padding: 10px 30px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #c82333;
+        }
+        
+        .booking-item.cancelled {
+            opacity: 0.6;
+            background-color: #f8f8f8;
+        }
+        
+        .status-cancelled {
+            background-color: #6c757d;
+            color: white;
+        }
+        
         .qr-code {
             width: 150px;
             height: 150px;
@@ -337,27 +369,28 @@
             }
             
             bookingList.innerHTML = bookings.map(booking => `
-                <div class="booking-item ${booking.status === 'completed' ? 'completed' : ''}">
+                <div class="booking-item ${booking.status === 'completed' ? 'completed' : ''} ${booking.status === 'cancelled' ? 'cancelled' : ''}">
                     <div class="booking-header">
                         <span class="booking-serial">${booking.serialNumber}</span>
                         <span class="booking-status status-${booking.status}">
-                            ${getStatusText(booking.status)}
+                            ${getStatusText(booking)}
                         </span>
                     </div>
                     <div class="booking-info">
                         <p><strong>预约日期：</strong>${booking.date}</p>
-                        <p><strong>时间段：</strong>${booking.timeSlot}</p>
+                        <p><strong>时间段：</strong>${booking.time}</p>
                         <p><strong>姓名：</strong>${booking.customerName}</p>
                         <p><strong>年龄：</strong>${booking.age}</p>
                         <p><strong>电话：</strong>${booking.phone}</p>
                         <p><strong>预约时间：</strong>${formatDateTime(booking.createdAt)}</p>
                     </div>
-                    ${booking.status !== 'completed' ? `
-                        <div class="booking-qr">
-                            <div class="qr-code">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(JSON.stringify({serialNumber: booking.serialNumber, id: booking.id}))}" alt="预约二维码">
+                    ${booking.status !== 'completed' && booking.status !== 'cancelled' ? `
+                        <div class="booking-actions">
+                            <div class="booking-qr">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.serialNumber)}" alt="预约二维码">
                             </div>
                             <p style="font-size: 12px; color: #666;">请保存此二维码，验光时出示</p>
+                            <button class="cancel-btn" onclick="cancelBooking('${booking.serialNumber}')">撤销预约</button>
                         </div>
                     ` : ''}
                 </div>
@@ -365,13 +398,34 @@
         }
         
         // 获取状态文本
-        function getStatusText(status) {
-            const statusMap = {
-                'pending': '待核销',
-                'completed': '已核销',
-                'cancelled': '已取消'
-            };
-            return statusMap[status] || status;
+        function getStatusText(booking) {
+            if (booking.statusText) return booking.statusText;
+            if (booking.status === 'cancelled') return '已撤销';
+            if (booking.verified) return '已核销';
+            return '已预约';
+        }
+        
+        // 撤销预约
+        async function cancelBooking(serialNumber) {
+            if (!confirm('确定要撤销这个预约吗？撤销后无法恢复。')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/bookings/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serialNumber })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('撤销成功！');
+                    loadBookings();
+                } else {
+                    alert(result.message || '撤销失败');
+                }
+            } catch (error) {
+                alert('网络错误，请稍后重试');
+            }
         }
         
         // 格式化日期时间

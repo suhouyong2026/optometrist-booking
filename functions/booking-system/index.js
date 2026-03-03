@@ -75,7 +75,7 @@ exports.main = async function(event, context) {
         status: 'confirmed', verified: false, createdAt: new Date().toISOString()
       });
       
-      return { code: 0, success: true, booking: { serialNumber, date, timeSlot, verified: false } };
+      return { code: 0, success: true, booking: { serialNumber, date, time: timeSlot, timeSlot: timeSlot, verified: false } };
     }
     
     // 获取顾客预约记录
@@ -132,6 +132,25 @@ exports.main = async function(event, context) {
       booking.verifiedAt = new Date().toISOString();
       booking.status = 'completed';
       return { code: 0, success: true, message: '核销成功' };
+    }
+    
+    // 撤销预约
+    if (path === '/api/bookings/cancel' && method === 'POST') {
+      const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      const { serialNumber } = body;
+      
+      const bookingIndex = global.bookings.findIndex(b => b.serialNumber === serialNumber);
+      if (bookingIndex === -1) return { code: -1, success: false, message: '预约不存在' };
+      
+      const booking = global.bookings[bookingIndex];
+      if (booking.verified) return { code: -1, success: false, message: '已核销的预约无法撤销' };
+      if (booking.status === 'cancelled') return { code: -1, success: false, message: '预约已撤销' };
+      
+      // 标记为已撤销
+      booking.status = 'cancelled';
+      booking.cancelledAt = new Date().toISOString();
+      
+      return { code: 0, success: true, message: '撤销成功' };
     }
     
     // 用户登录
