@@ -422,7 +422,7 @@
             }
             
             // 跳转到微信授权页
-            const redirectUri = encodeURIComponent('https://suhouyong2026-5gq178it64857137-1404541376.tcloudbaseapp.com/api/wechat/callback');
+            const redirectUri = encodeURIComponent('https://suhouyong2026-5gq178it64857137-1404541376.tcloudbaseapp.com/wechat-callback.html');
             const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx1429f448f5034214&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=123#wechat_redirect`;
             window.location.href = authUrl;
         }
