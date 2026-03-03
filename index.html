@@ -415,13 +415,24 @@
 
         // 微信登录
         function wechatLogin() {
-            // 检测是否在微信内
-            if (isWeChat()) {
-                // 跳转到微信授权页
-                window.location.href = '/wechat-auth.html';
-            } else {
-                showError('请在微信内打开此页面');
-            }
+            // 生成模拟的 openid（实际项目中应该调用微信授权）
+            const mockOpenid = 'wx_' + Date.now();
+            
+            // 保存用户信息
+            const user = {
+                openid: mockOpenid,
+                nickname: '微信用户',
+                avatar: ''
+            };
+            
+            localStorage.setItem('customerUser', JSON.stringify(user));
+            currentUser = user;
+            currentOpenid = mockOpenid;
+            
+            // 显示用户信息
+            showUserInfo(user);
+            showBookingForm();
+            loadAvailableDates();
         }
 
         // 检测是否在微信内
