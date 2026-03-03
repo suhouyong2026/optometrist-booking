@@ -757,18 +757,27 @@
         
         // 切换数据库标签页
         function switchDbTab(tab) {
+            console.log('切换到标签页:', tab);
             currentDbTab = tab;
-            
+
             // 更新标签页样式
             document.querySelectorAll('.db-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
-            
+
             // 显示对应内容
             document.querySelectorAll('.db-content').forEach(c => c.style.display = 'none');
             document.getElementById('db-' + tab).style.display = 'block';
-            
+
             // 加载对应数据
-            refreshCurrentTab();
+            console.log('当前标签页:', currentDbTab);
+            if (tab === 'users') {
+                console.log('正在调用 loadDbUsers...');
+                loadDbUsers();
+            } else if (tab === 'bookings') {
+                loadDbBookings();
+            } else if (tab === 'shifts') {
+                loadDbShifts();
+            }
         }
         
         // 刷新当前标签页
