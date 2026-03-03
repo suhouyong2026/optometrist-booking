@@ -1,5 +1,9 @@
 {
   "name": "booking-system",
   "version": "1.0.0",
-  "description": "预约系统云函数"
+  "description": "预约系统云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
 }
