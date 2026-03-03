@@ -437,22 +437,15 @@
             showLoading(true);
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/wechat/userinfo?openid=${openid}`);
-                const result = await response.json();
-                
-                if (result.success && result.user) {
-                    currentUser = result.user;
+                // 从本地存储读取用户信息（回调页面已保存）
+                const userStr = localStorage.getItem('customerUser');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    currentUser = user;
                     currentOpenid = openid;
                     
-                    // 保存到本地存储
-                    localStorage.setItem('customerUser', JSON.stringify({
-                        openid: openid,
-                        nickname: result.user.nickname,
-                        avatar: result.user.avatar
-                    }));
-                    
                     // 显示用户信息
-                    showUserInfo(result.user);
+                    showUserInfo(user);
                     showBookingForm();
                     loadAvailableDates();
                 } else {
