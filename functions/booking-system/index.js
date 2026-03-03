@@ -185,12 +185,20 @@ exports.main = async function(event, context) {
     // 获取预约列表
     if (path === '/api/bookings' && method === 'GET') {
       const bookingsRes = await db.collection('bookings').orderBy('createdAt', 'desc').get();
-      
+
+      // 获取所有用户的头像信息
+      const usersRes = await db.collection('users').get();
+      const userMap = {};
+      usersRes.data.forEach(u => {
+        userMap[u.openid] = u.avatar || '';
+      });
+
       const bookings = bookingsRes.data.map(b => ({
         ...b,
+        avatar: userMap[b.openid] || '',
         statusText: b.status === 'cancelled' ? '已撤销' : (b.verified ? '已核销' : '已预约')
       }));
-      
+
       return { code: 0, success: true, bookings: bookings };
     }
     
