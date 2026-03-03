@@ -245,6 +245,9 @@
     </div>
 
     <script>
+        // API 基础 URL
+        const API_BASE_URL = 'https://suhouyong2026-5gq178it64857137-1404541376.ap-shanghai.app.tcloudbase.com';
+        
         let currentUser = null;
         
         // 页面加载
@@ -307,7 +310,7 @@
             }
             
             try {
-                const response = await fetch(`/api/customer/bookings?phone=${currentUser.phone}`);
+                const response = await fetch(`${API_BASE_URL}/api/customer/bookings?phone=${currentUser.phone}`);
                 const result = await response.json();
                 
                 if (result.success) {

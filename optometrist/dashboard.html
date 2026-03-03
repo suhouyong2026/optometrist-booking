@@ -364,6 +364,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
+        // API 基础 URL
+        const API_BASE_URL = 'https://suhouyong2026-5gq178it64857137-1404541376.ap-shanghai.app.tcloudbase.com';
+        
         let currentUser = null;
         let selectedDates = [];
         let existingShifts = [];
@@ -412,7 +415,7 @@
             
             // 获取该月的班次
             try {
-                const response = await fetch(`/api/shifts/${currentUser.id}/${monthInput}`);
+                const response = await fetch(`${API_BASE_URL}/api/shifts/${currentUser.id}/${monthInput}`);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -490,7 +493,7 @@
             const messageEl = document.getElementById('shiftMessage');
             
             try {
-                const response = await fetch('/api/shifts', {
+                const response = await fetch(`${API_BASE_URL}/api/shifts`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -534,7 +537,7 @@
             }
             
             try {
-                const response = await fetch('/api/verify', {
+                const response = await fetch(`${API_BASE_URL}/api/verify`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -597,7 +600,7 @@
             if (!currentVerifySerial) return;
             
             try {
-                const response = await fetch('/api/verify/confirm', {
+                const response = await fetch(`${API_BASE_URL}/api/verify/confirm`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
