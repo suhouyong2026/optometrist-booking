@@ -183,6 +183,26 @@ exports.main = async function(event, context) {
         statusText: b.status === 'cancelled' ? '已撤销' : (b.verified ? '已核销' : '已预约')
       }));
       
+      return { code: 0, success: true, bookings: bookings };
+    }
+    
+    // 获取统计数据（admin后台用）
+    if (path.startsWith('/api/statistics') && method === 'GET') {
+      const month = event.queryStringParameters && event.queryStringParameters.month;
+      
+      let query = db.collection('bookings').orderBy('createdAt', 'desc');
+      if (month) {
+        query = query.where({
+          date: db.RegExp({
+            regexp: '^' + month,
+            options: 'i'
+          })
+        });
+      }
+      
+      const bookingsRes = await query.get();
+      const bookings = bookingsRes.data;
+      
       // 计算统计数据
       const total = bookings.length;
       const completed = bookings.filter(b => b.verified).length;
@@ -203,8 +223,7 @@ exports.main = async function(event, context) {
       
       return { 
         code: 0, 
-        success: true, 
-        bookings: bookings,
+        success: true,
         summary: {
           total,
           completed,
