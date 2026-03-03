@@ -264,6 +264,7 @@
                     <tr>
                         <th>流水号</th>
                         <th>姓名</th>
+                        <th>微信昵称</th>
                         <th>年龄</th>
                         <th>电话</th>
                         <th>预约日期</th>
@@ -343,12 +344,13 @@
             emptyState.style.display = 'none';
             
             tbody.innerHTML = bookings.map(booking => {
-                const statusClass = booking.status === 'cancelled' ? 'status-cancelled' : 
+                const statusClass = booking.status === 'cancelled' ? 'status-cancelled' :
                                    (booking.verified || booking.status === 'completed') ? 'status-completed' : 'status-pending';
                 return `
                 <tr>
                     <td>${booking.serialNumber}</td>
                     <td>${booking.customerName}</td>
+                    <td>${booking.nickname || '-'}</td>
                     <td>${booking.age}</td>
                     <td>${booking.phone}</td>
                     <td>${booking.date}</td>

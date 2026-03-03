@@ -66,7 +66,7 @@ exports.main = async function(event, context) {
     // 创建预约
     if (path === '/api/bookings' && method === 'POST') {
       const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-      const { customerName, age, phone, date, timeSlot } = body;
+      const { customerName, age, phone, date, timeSlot, nickname, openid } = body;
       
       if (!customerName || !age || !phone || !date || !timeSlot) {
         return { code: -1, success: false, message: '请填写完整信息' };
@@ -111,6 +111,8 @@ exports.main = async function(event, context) {
           time: timeSlot,
           status: 'confirmed',
           verified: false,
+          nickname: nickname || '',
+          openid: openid || '',
           createdAt: new Date().toISOString()
         }
       });

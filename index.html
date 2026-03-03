@@ -22,21 +22,41 @@
         
         .header {
             text-align: center;
-            padding: 20px 0;
+            padding: 20px 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border-radius: 10px;
             margin-bottom: 20px;
+            position: relative;
         }
-        
+
         .header h1 {
             font-size: 24px;
             margin-bottom: 5px;
         }
-        
+
         .header p {
             font-size: 14px;
             opacity: 0.9;
+        }
+
+        .header-logout-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .header-logout-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
         
         .user-info {
@@ -301,6 +321,7 @@
     <div class="header">
         <h1>验光师预约</h1>
         <p>天津标准眼镜 · 和平路总店</p>
+        <button class="header-logout-btn" id="headerLogoutBtn" onclick="logout()">退出</button>
     </div>
 
     <!-- 微信用户信息 -->
@@ -465,6 +486,18 @@
             document.getElementById('userAvatar').src = user.avatar || '';
             document.getElementById('userName').textContent = user.nickname || '微信用户';
             document.getElementById('userOpenid').textContent = 'ID: ' + user.openid.substr(0, 8) + '...';
+            // 显示header退出按钮
+            document.getElementById('headerLogoutBtn').style.display = 'block';
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('customerUser');
+            localStorage.removeItem('customerPhone');
+            currentUser = null;
+            currentOpenid = '';
+            document.getElementById('headerLogoutBtn').style.display = 'none';
+            showLoginPrompt();
         }
 
         // 显示登录提示
@@ -654,7 +687,8 @@
                         phone,
                         date: selectedDate,
                         timeSlot: selectedTime,
-                        openid: currentOpenid || ''
+                        openid: currentOpenid || '',
+                        nickname: currentUser?.nickname || ''
                     })
                 });
                 
