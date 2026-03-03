@@ -415,24 +415,16 @@
 
         // 微信登录
         function wechatLogin() {
-            // 生成模拟的 openid（实际项目中应该调用微信授权）
-            const mockOpenid = 'wx_' + Date.now();
+            // 检测是否在微信内
+            if (!isWeChat()) {
+                showError('请在微信内打开此页面');
+                return;
+            }
             
-            // 保存用户信息
-            const user = {
-                openid: mockOpenid,
-                nickname: '微信用户',
-                avatar: ''
-            };
-            
-            localStorage.setItem('customerUser', JSON.stringify(user));
-            currentUser = user;
-            currentOpenid = mockOpenid;
-            
-            // 显示用户信息
-            showUserInfo(user);
-            showBookingForm();
-            loadAvailableDates();
+            // 跳转到微信授权页
+            const redirectUri = encodeURIComponent(`${API_BASE_URL}/api/wechat/callback`);
+            const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx1429f448f5034214&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=123#wechat_redirect`;
+            window.location.href = authUrl;
         }
 
         // 检测是否在微信内
