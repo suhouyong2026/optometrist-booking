@@ -371,8 +371,8 @@
         <h2>✅ 预约成功！</h2>
         <p>请保存以下预约信息</p>
         
-        <div class="qr-code">
-            <img id="qrCodeImage" src="" alt="预约二维码">
+        <div class="qr-code" id="qrCodeContainer">
+            <img id="qrCodeImage" src="" alt="预约二维码" style="display:none;">
         </div>
         <div class="serial-number" id="serialNumber"></div>
         <p>预约时间：<span id="bookingTime"></span></p>
@@ -687,7 +687,7 @@
                     document.getElementById('resultContainer').style.display = 'block';
                     
                     // 使用 QRCode.js 在前端生成二维码
-                    const qrContainer = document.getElementById('qrCodeImage');
+                    const qrContainer = document.getElementById('qrCodeContainer');
                     qrContainer.innerHTML = '';
                     new QRCode(qrContainer, {
                         text: result.booking.serialNumber,
