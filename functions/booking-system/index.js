@@ -316,43 +316,107 @@ exports.main = async function(event, context) {
       return { code: -1, success: false, message: '用户名或密码错误' };
     }
     
-    // 微信授权回调 - 简化版，直接返回成功
+    // 微信授权回调 - 完整版，调用微信API获取用户信息
     if (path === '/api/wechat/callback' && method === 'GET') {
       const code = event.queryStringParameters && event.queryStringParameters.code;
-      
+
       if (!code) {
         return { code: -1, success: false, message: '授权失败' };
       }
-      
-      // 简化处理：使用 code 作为 openid（实际项目中应该调用微信API换取）
-      // 这里为了演示，直接生成一个模拟的 openid
-      const openid = 'wx_' + Date.now();
-      
-      // 保存用户信息到数据库
-      const userCollection = db.collection('users');
-      const existingUser = await userCollection.where({ openid }).get();
-      
-      if (existingUser.data.length === 0) {
-        await userCollection.add({
-          data: {
-            openid,
-            nickname: '微信用户',
-            avatar: '',
-            createdAt: new Date().toISOString()
-          }
+
+      try {
+        // 1. 使用 code 换取 access_token 和 openid
+        const appid = 'wx1429f448f5034214';
+        const secret = process.env.WECHAT_APPSECRET || 'f376c0c3efaf0a72db626ace03a84681';
+
+        const tokenUrl = `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appid}&secret=${secret}&code=${code}&grant_type=authorization_code`;
+
+        const tokenRes = await new Promise((resolve, reject) => {
+          const https = require('https');
+          https.get(tokenUrl, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(data));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }).on('error', reject);
         });
-      }
-      
-      // 返回用户信息
-      return {
-        code: 0,
-        success: true,
-        user: {
-          openid,
-          nickname: '微信用户',
-          avatar: ''
+
+        if (tokenRes.errcode) {
+          return { code: -1, success: false, message: '微信授权失败: ' + tokenRes.errmsg };
         }
-      };
+
+        const { access_token, openid } = tokenRes;
+
+        // 2. 使用 access_token 获取用户信息
+        const userInfoUrl = `https://api.weixin.qq.com/sns/userinfo?access_token=${access_token}&openid=${openid}&lang=zh_CN`;
+
+        const userInfo = await new Promise((resolve, reject) => {
+          const https = require('https');
+          https.get(userInfoUrl, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(data));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }).on('error', reject);
+        });
+
+        if (userInfo.errcode) {
+          return { code: -1, success: false, message: '获取用户信息失败: ' + userInfo.errmsg };
+        }
+
+        // 3. 保存用户信息到数据库
+        const userCollection = db.collection('users');
+        const existingUser = await userCollection.where({ openid }).get();
+
+        const userData = {
+          openid,
+          nickname: userInfo.nickname || '微信用户',
+          avatar: userInfo.headimgurl || '',
+          sex: userInfo.sex || 0,
+          province: userInfo.province || '',
+          city: userInfo.city || '',
+          country: userInfo.country || '',
+          updatedAt: new Date().toISOString()
+        };
+
+        if (existingUser.data.length === 0) {
+          await userCollection.add({
+            data: {
+              ...userData,
+              createdAt: new Date().toISOString()
+            }
+          });
+        } else {
+          await userCollection.doc(existingUser.data[0]._id).update({
+            data: userData
+          });
+        }
+
+        // 4. 返回用户信息
+        return {
+          code: 0,
+          success: true,
+          user: {
+            openid,
+            nickname: userInfo.nickname || '微信用户',
+            avatar: userInfo.headimgurl || ''
+          }
+        };
+
+      } catch (error) {
+        console.error('微信登录错误:', error);
+        return { code: -1, success: false, message: '微信登录失败: ' + error.message };
+      }
     }
     
     return { code: -1, success: false, message: '接口不存在' };
