@@ -1,0 +1,15 @@
+{
+  "envId": "suhouyong2026-5gq178it64857137",
+  "functionRoot": "functions",
+  "functions": [
+    {
+      "name": "booking-system",
+      "config": {
+        "timeout": 15,
+        "envVariables": {
+          "WECHAT_APPSECRET": "f376c0c3efaf0a72db626ace03a84681"
+        }
+      }
+    }
+  ]
+}
