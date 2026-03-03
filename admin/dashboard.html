@@ -940,12 +940,18 @@
         // 加载用户信息
         async function loadDbUsers() {
             try {
+                console.log('正在加载用户信息...');
                 // 调用云函数获取用户列表
                 const response = await fetch(`${API_BASE_URL}/api/users`);
                 const result = await response.json();
-                
+                console.log('用户信息返回:', result);
+
                 if (result.success) {
                     renderDbUsers(result.users);
+                } else {
+                    console.error('加载用户失败:', result.message);
+                    document.getElementById('dbUsersTableBody').innerHTML = '';
+                    document.getElementById('dbUsersEmptyState').style.display = 'block';
                 }
             } catch (error) {
                 console.error('加载用户失败:', error);
