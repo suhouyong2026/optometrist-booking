@@ -218,6 +218,9 @@
     </div>
 
     <script>
+        // API 基础 URL
+        const API_BASE_URL = 'https://suhouyong2026-5gq178it64857137-1404541376.ap-shanghai.app.tcloudbase.com';
+        
         let currentUser = null;
         
         // 检查登录状态
@@ -245,7 +248,7 @@
             const dateFilter = document.getElementById('dateFilter').value;
             const statusFilter = document.getElementById('statusFilter').value;
             
-            let url = '/api/bookings?';
+            let url = `${API_BASE_URL}/api/bookings?`;
             if (dateFilter) url += `date=${dateFilter}&`;
             if (statusFilter) url += `status=${statusFilter}&`;
             
@@ -283,7 +286,7 @@
                     <td>${booking.phone}</td>
                     <td>${booking.date}</td>
                     <td>${booking.timeSlot}</td>
-                    <td><span class="status status-${booking.status}">${getStatusText(booking.status)}</span></td>
+                    <td><span class="status status-${booking.status}">${getStatusText(booking)}</span></td>
                     <td>${formatDateTime(booking.createdAt)}</td>
                 </tr>
             `).join('');
@@ -292,8 +295,8 @@
         // 更新统计
         function updateStats(bookings) {
             const total = bookings.length;
-            const pending = bookings.filter(b => b.status === 'pending').length;
-            const completed = bookings.filter(b => b.status === 'completed').length;
+            const pending = bookings.filter(b => !b.verified).length;
+            const completed = bookings.filter(b => b.verified).length;
             
             document.getElementById('totalBookings').textContent = total;
             document.getElementById('pendingBookings').textContent = pending;
@@ -301,13 +304,11 @@
         }
         
         // 获取状态文本
-        function getStatusText(status) {
-            const statusMap = {
-                'pending': '待核销',
-                'completed': '已核销',
-                'cancelled': '已取消'
-            };
-            return statusMap[status] || status;
+        function getStatusText(booking) {
+            // 优先使用 statusText 字段
+            if (booking.statusText) return booking.statusText;
+            // 否则根据 verified 判断
+            return booking.verified ? '已核销' : '已预约';
         }
         
         // 格式化日期时间

@@ -511,6 +511,9 @@
                     messageEl.textContent = '班次保存成功！';
                     messageEl.style.display = 'block';
                     
+                    // 弹窗提示
+                    alert('✅ 班次设置成功！');
+                    
                     setTimeout(() => {
                         loadCalendar();
                         messageEl.style.display = 'none';

@@ -75,7 +75,6 @@ exports.main = async function(event, context) {
         status: 'confirmed', verified: false, createdAt: new Date().toISOString()
       });
       
-      // 返回流水号，让前端生成二维码
       return { code: 0, success: true, booking: { serialNumber, date, timeSlot, verified: false } };
     }
     
@@ -86,7 +85,6 @@ exports.main = async function(event, context) {
       if (phone) bookings = bookings.filter(b => b.phone === phone);
       bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       
-      // 转换状态显示
       bookings = bookings.map(b => ({
         ...b,
         statusText: b.verified ? '已核销' : '已预约'
@@ -119,13 +117,7 @@ exports.main = async function(event, context) {
     // 获取预约列表
     if (path === '/api/bookings' && method === 'GET') {
       let bookings = global.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      
-      // 转换状态显示
-      bookings = bookings.map(b => ({
-        ...b,
-        statusText: b.verified ? '已核销' : '已预约'
-      }));
-      
+      bookings = bookings.map(b => ({ ...b, statusText: b.verified ? '已核销' : '已预约' }));
       return { code: 0, success: true, bookings: bookings };
     }
     

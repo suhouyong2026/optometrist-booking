@@ -606,7 +606,10 @@
             availableSlots.forEach(slot => {
                 const timeSlot = document.createElement('div');
                 timeSlot.className = `time-slot ${slot.available ? 'available' : 'unavailable'}`;
-                timeSlot.textContent = slot.time;
+                
+                // 显示时间段和剩余名额
+                const remaining = slot.total - slot.booked;
+                timeSlot.innerHTML = `${slot.time}<br><small>${slot.total}个名额，剩${remaining}个</small>`;
                 
                 if (slot.available) {
                     timeSlot.addEventListener('click', () => selectTime(slot.time));
