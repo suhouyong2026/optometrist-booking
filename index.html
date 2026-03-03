@@ -632,15 +632,23 @@
             document.getElementById('storeSelection').style.display = 'block';
 
             try {
+                console.log('正在加载门店列表...');
                 const response = await fetch(`${API_BASE_URL}/api/stores`);
                 const result = await response.json();
+                console.log('门店列表返回:', result);
 
                 if (result.success) {
-                    renderStoreList(result.stores);
+                    if (result.stores && result.stores.length > 0) {
+                        renderStoreList(result.stores);
+                    } else {
+                        document.getElementById('storeList').innerHTML = '<p style="color: #999; text-align: center;">暂无门店数据</p>';
+                    }
+                } else {
+                    showError('加载门店失败: ' + (result.message || '未知错误'));
                 }
             } catch (error) {
                 console.error('加载门店失败:', error);
-                showError('加载门店信息失败');
+                showError('加载门店信息失败: ' + error.message);
             }
         }
 
