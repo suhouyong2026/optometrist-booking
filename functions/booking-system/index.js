@@ -183,7 +183,36 @@ exports.main = async function(event, context) {
         statusText: b.status === 'cancelled' ? '已撤销' : (b.verified ? '已核销' : '已预约')
       }));
       
-      return { code: 0, success: true, bookings: bookings };
+      // 计算统计数据
+      const total = bookings.length;
+      const completed = bookings.filter(b => b.verified).length;
+      const cancelled = bookings.filter(b => b.status === 'cancelled').length;
+      const pending = total - completed - cancelled;
+      
+      // 按日期统计
+      const dailyStats = {};
+      bookings.forEach(b => {
+        const date = b.date;
+        if (!dailyStats[date]) {
+          dailyStats[date] = { date, count: 0, completed: 0, cancelled: 0 };
+        }
+        dailyStats[date].count++;
+        if (b.verified) dailyStats[date].completed++;
+        if (b.status === 'cancelled') dailyStats[date].cancelled++;
+      });
+      
+      return { 
+        code: 0, 
+        success: true, 
+        bookings: bookings,
+        summary: {
+          total,
+          completed,
+          pending,
+          cancelled
+        },
+        dailyStats: Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date))
+      };
     }
     
     // 核销预约
