@@ -263,6 +263,7 @@
                 <thead>
                     <tr>
                         <th>流水号</th>
+                        <th>头像</th>
                         <th>姓名</th>
                         <th>微信昵称</th>
                         <th>年龄</th>
@@ -346,9 +347,13 @@
             tbody.innerHTML = bookings.map(booking => {
                 const statusClass = booking.status === 'cancelled' ? 'status-cancelled' :
                                    (booking.verified || booking.status === 'completed') ? 'status-completed' : 'status-pending';
+                const avatarHtml = booking.avatar
+                    ? `<img src="${booking.avatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
+                    : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">无</div>`;
                 return `
                 <tr>
                     <td>${booking.serialNumber}</td>
+                    <td>${avatarHtml}</td>
                     <td>${booking.customerName}</td>
                     <td>${booking.nickname || '-'}</td>
                     <td>${booking.age}</td>
