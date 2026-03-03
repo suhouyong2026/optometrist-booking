@@ -453,6 +453,61 @@ exports.main = async function(event, context) {
       }
     }
     
+    // 获取门店列表
+    if (path === '/api/stores' && method === 'GET') {
+      const storesRes = await db.collection('stores').get();
+      
+      // 如果没有门店数据，初始化默认门店
+      if (storesRes.data.length === 0) {
+        await db.collection('stores').add({
+          data: {
+            id: 'store_001',
+            name: '和平路总店',
+            address: '天津市和平区和平路XXX号',
+            phone: '022-XXXXXXXX',
+            status: 'active',
+            createdAt: new Date().toISOString()
+          }
+        });
+        const newStoresRes = await db.collection('stores').get();
+        return { code: 0, success: true, stores: newStoresRes.data };
+      }
+      
+      return { code: 0, success: true, stores: storesRes.data };
+    }
+    
+    // 获取验光师列表
+    if (path === '/api/optometrists' && method === 'GET') {
+      const { storeId } = event.queryStringParameters || {};
+      
+      let query = db.collection('optometrists');
+      if (storeId) {
+        query = query.where({ storeId });
+      }
+      
+      const optometristsRes = await query.get();
+      
+      // 如果没有验光师数据，初始化默认验光师
+      if (optometristsRes.data.length === 0) {
+        await db.collection('optometrists').add({
+          data: {
+            id: 'opt_001',
+            name: '许晓龙',
+            storeId: 'store_001',
+            title: '专职验光师',
+            bio: '和平路总店专职验光师，从事验光工作多年，经验丰富，专业细致，为您提供优质的验光服务。擅长各类视力问题的检查与矫正，包括近视、远视、散光等常见视力问题。',
+            avatar: '',
+            status: 'active',
+            createdAt: new Date().toISOString()
+          }
+        });
+        const newOptometristsRes = await db.collection('optometrists').get();
+        return { code: 0, success: true, optometrists: newOptometristsRes.data };
+      }
+      
+      return { code: 0, success: true, optometrists: optometristsRes.data };
+    }
+    
     return { code: -1, success: false, message: '接口不存在' };
     
   } catch (error) {

@@ -90,7 +90,121 @@
             font-size: 12px;
             color: #999;
         }
-        
+
+        /* 门店选择样式 */
+        .store-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .store-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .store-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .store-card h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .store-card p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* 验光师选择样式 */
+        .optometrist-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .optometrist-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .optometrist-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .optometrist-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            flex-shrink: 0;
+        }
+
+        .optometrist-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .optometrist-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .optometrist-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .optometrist-title {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .optometrist-bio {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .back-btn {
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #e0e0e0;
+        }
+
         .form-container {
             background: white;
             padding: 20px;
@@ -344,6 +458,21 @@
         </button>
     </div>
 
+    <!-- 门店选择页 -->
+    <div id="storeSelection" class="form-container" style="display: none;">
+        <h2 style="margin-bottom: 10px; color: #333;">选择门店</h2>
+        <p style="color: #666; margin-bottom: 30px;">请选择您要预约的门店</p>
+        <div id="storeList" class="store-list"></div>
+    </div>
+
+    <!-- 验光师选择页 -->
+    <div id="optometristSelection" class="form-container" style="display: none;">
+        <h2 style="margin-bottom: 10px; color: #333;">选择验光师</h2>
+        <p style="color: #666; margin-bottom: 30px;">请选择您的专属验光师</p>
+        <div id="optometristList" class="optometrist-list"></div>
+        <button class="back-btn" onclick="backToStoreSelection()" style="margin-top: 20px;">返回门店选择</button>
+    </div>
+
     <!-- 预约表单 -->
     <div id="formContainer" class="form-container" style="display: none;">
         <div class="error-message" id="errorMessage"></div>
@@ -407,6 +536,8 @@
         let availableSlots = [];
         let currentUser = null;
         let currentOpenid = null;
+        let selectedStore = null;
+        let selectedOptometrist = null;
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -414,13 +545,13 @@
             const urlParams = new URLSearchParams(window.location.search);
             const openid = urlParams.get('openid');
             const wechatLogin = urlParams.get('wechat_login');
-            
+
             if (openid && wechatLogin === '1') {
                 // 微信登录成功，获取用户信息
                 loadWechatUserInfo(openid);
                 return;
             }
-            
+
             // 检查本地存储
             const userStr = localStorage.getItem('customerUser');
             if (userStr) {
@@ -441,10 +572,15 @@
                 showError('请在微信内打开此页面');
                 return;
             }
-            
-            // 跳转到微信授权页
+
+            // 清除本地存储的登录状态，强制重新授权
+            localStorage.removeItem('customerUser');
+            localStorage.removeItem('customerPhone');
+
+            // 跳转到微信授权页，使用随机state参数
             const redirectUri = encodeURIComponent('https://suhouyong2026-5gq178it64857137-1404541376.tcloudbaseapp.com/wechat-callback.html');
-            const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx1429f448f5034214&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=123#wechat_redirect`;
+            const randomState = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx1429f448f5034214&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=${randomState}#wechat_redirect`;
             window.location.href = authUrl;
         }
 
@@ -456,7 +592,7 @@
         // 加载微信用户信息
         async function loadWechatUserInfo(openid) {
             showLoading(true);
-            
+
             try {
                 // 从本地存储读取用户信息（回调页面已保存）
                 const userStr = localStorage.getItem('customerUser');
@@ -464,11 +600,22 @@
                     const user = JSON.parse(userStr);
                     currentUser = user;
                     currentOpenid = openid;
-                    
+
                     // 显示用户信息
                     showUserInfo(user);
-                    showBookingForm();
-                    loadAvailableDates();
+
+                    // 检查是否已选择门店和验光师
+                    selectedStore = localStorage.getItem('selectedStore');
+                    selectedOptometrist = localStorage.getItem('selectedOptometrist');
+
+                    if (selectedStore && selectedOptometrist) {
+                        // 已选择过，直接显示预约表单
+                        showBookingForm();
+                        loadAvailableDates();
+                    } else {
+                        // 未选择，显示门店选择页
+                        showStoreSelection();
+                    }
                 } else {
                     showError('获取用户信息失败');
                 }
@@ -478,6 +625,103 @@
             } finally {
                 showLoading(false);
             }
+        }
+
+        // 显示门店选择页
+        async function showStoreSelection() {
+            hideAllPages();
+            document.getElementById('storeSelection').style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/stores`);
+                const result = await response.json();
+
+                if (result.success) {
+                    renderStoreList(result.stores);
+                }
+            } catch (error) {
+                console.error('加载门店失败:', error);
+                showError('加载门店信息失败');
+            }
+        }
+
+        // 渲染门店列表
+        function renderStoreList(stores) {
+            const storeList = document.getElementById('storeList');
+            storeList.innerHTML = stores.map(store => `
+                <div class="store-card" onclick="selectStore('${store._id}', '${store.name}')">
+                    <h3>${store.name}</h3>
+                    <p>${store.address || '天津市和平区'}</p>
+                </div>
+            `).join('');
+        }
+
+        // 选择门店
+        function selectStore(storeId, storeName) {
+            selectedStore = { id: storeId, name: storeName };
+            localStorage.setItem('selectedStore', JSON.stringify(selectedStore));
+            showOptometristSelection(storeId);
+        }
+
+        // 显示验光师选择页
+        async function showOptometristSelection(storeId) {
+            hideAllPages();
+            document.getElementById('optometristSelection').style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/optometrists?storeId=${storeId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    renderOptometristList(result.optometrists);
+                }
+            } catch (error) {
+                console.error('加载验光师失败:', error);
+                showError('加载验光师信息失败');
+            }
+        }
+
+        // 渲染验光师列表
+        function renderOptometristList(optometrists) {
+            const optometristList = document.getElementById('optometristList');
+            optometristList.innerHTML = optometrists.map(opt => `
+                <div class="optometrist-card" onclick="selectOptometrist('${opt._id}', '${opt.name}')">
+                    <div class="optometrist-avatar">
+                        ${opt.avatar ? `<img src="${opt.avatar}" alt="${opt.name}">` : opt.name.charAt(0)}
+                    </div>
+                    <div class="optometrist-info">
+                        <div class="optometrist-name">${opt.name}</div>
+                        <div class="optometrist-title">${opt.title || '专职验光师'}</div>
+                        <div class="optometrist-bio">${opt.bio || '专业验光师，为您提供优质服务'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 选择验光师
+        function selectOptometrist(optometristId, optometristName) {
+            selectedOptometrist = { id: optometristId, name: optometristName };
+            localStorage.setItem('selectedOptometrist', JSON.stringify(selectedOptometrist));
+            showBookingForm();
+            loadAvailableDates();
+        }
+
+        // 返回门店选择
+        function backToStoreSelection() {
+            localStorage.removeItem('selectedStore');
+            localStorage.removeItem('selectedOptometrist');
+            selectedStore = null;
+            selectedOptometrist = null;
+            showStoreSelection();
+        }
+
+        // 隐藏所有页面
+        function hideAllPages() {
+            document.getElementById('loginPrompt').style.display = 'none';
+            document.getElementById('storeSelection').style.display = 'none';
+            document.getElementById('optometristSelection').style.display = 'none';
+            document.getElementById('formContainer').style.display = 'none';
+            document.getElementById('resultContainer').style.display = 'none';
         }
 
         // 显示用户信息
@@ -519,10 +763,10 @@
 
         // 显示预约表单
         function showBookingForm() {
-            document.getElementById('loginPrompt').style.display = 'none';
+            hideAllPages();
             document.getElementById('formContainer').style.display = 'block';
             document.getElementById('userInfo').style.display = 'flex';
-            
+
             // 从本地存储读取手机号并填充
             const savedPhone = localStorage.getItem('customerPhone');
             if (savedPhone) {
