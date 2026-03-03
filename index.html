@@ -606,6 +606,7 @@
             availableSlots.forEach(slot => {
                 const timeSlot = document.createElement('div');
                 timeSlot.className = `time-slot ${slot.available ? 'available' : 'unavailable'}`;
+                timeSlot.setAttribute('data-time', slot.time);
                 
                 // 显示时间段和剩余名额
                 const remaining = slot.total - slot.booked;
@@ -625,9 +626,8 @@
                 item.classList.remove('selected');
             });
             
-            const selectedElement = Array.from(document.querySelectorAll('.time-slot')).find(
-                el => el.textContent === time
-            );
+            // 通过 data-time 属性选择
+            const selectedElement = document.querySelector(`.time-slot[data-time="${time}"]`);
             if (selectedElement) {
                 selectedElement.classList.add('selected');
             }
