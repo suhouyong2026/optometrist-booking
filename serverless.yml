@@ -1,0 +1,22 @@
+# serverless.yml
+component: scf
+type: cloud-function
+name: booking-system
+
+inputs:
+  name: booking-system
+  namespace: default
+  runtime: Nodejs18.15
+  handler: index.main
+  memorySize: 256
+  timeout: 15
+  region: ap-beijing
+  codeUri: ./functions/booking-system
+  environment:
+    variables:
+      WECHAT_APPSECRET: f376c0c3efaf0a72db626ace03a84681
+  events:
+    - http:
+        path: /booking-system
+        method: ANY
+        cors: true

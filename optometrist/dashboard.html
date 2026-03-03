@@ -239,6 +239,11 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        
+        .message.info {
+            background-color: #fff3cd;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -397,6 +402,9 @@
             document.getElementById('monthInput').value = monthStr;
             
             loadCalendar();
+            
+            // 检查是否已保存班次
+            checkShiftsSaved();
         });
         
         // 切换标签
@@ -492,6 +500,24 @@
         async function saveShifts() {
             const messageEl = document.getElementById('shiftMessage');
             
+            // 检查是否有已保存的班次（禁止修改）
+            if (localStorage.getItem('shiftsSaved') === 'true') {
+                alert('⚠️ 班次已保存，不允许修改！如需调整请联系管理员。');
+                return;
+            }
+            
+            // 检查是否选择了日期
+            if (selectedDates.length === 0) {
+                alert('请先选择班次日期');
+                return;
+            }
+            
+            // 二次确认弹窗
+            const confirmMsg = `您选择了 ${selectedDates.length} 个日期：\n${selectedDates.join(', ')}\n\n确认保存后不可修改，是否继续？`;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/shifts`, {
                     method: 'POST',
@@ -511,11 +537,29 @@
                     messageEl.textContent = '班次保存成功！';
                     messageEl.style.display = 'block';
                     
+                    // 标记已保存，禁止再次修改
+                    localStorage.setItem('shiftsSaved', 'true');
+                    
+                    // 禁用保存按钮
+                    const saveBtn = document.querySelector('.save-btn');
+                    if (saveBtn) {
+                        saveBtn.textContent = '已保存';
+                        saveBtn.disabled = true;
+                        saveBtn.style.background = '#ccc';
+                        saveBtn.style.cursor = 'not-allowed';
+                    }
+                    
+                    // 禁用日历点击
+                    const calendarDays = document.querySelectorAll('.calendar-day');
+                    calendarDays.forEach(day => {
+                        day.style.pointerEvents = 'none';
+                        day.style.opacity = '0.6';
+                    });
+                    
                     // 弹窗提示
-                    alert('✅ 班次设置成功！');
+                    alert('✅ 班次设置成功！已保存，不可修改。');
                     
                     setTimeout(() => {
-                        loadCalendar();
                         messageEl.style.display = 'none';
                     }, 1500);
                 } else {
@@ -527,6 +571,30 @@
                 messageEl.className = 'message error';
                 messageEl.textContent = '保存失败，请稍后重试';
                 messageEl.style.display = 'block';
+            }
+        }
+        
+        // 检查是否已保存班次（页面加载时调用）
+        function checkShiftsSaved() {
+            if (localStorage.getItem('shiftsSaved') === 'true') {
+                // 禁用保存按钮
+                const saveBtn = document.querySelector('.save-btn');
+                if (saveBtn) {
+                    saveBtn.textContent = '已保存';
+                    saveBtn.disabled = true;
+                    saveBtn.style.background = '#ccc';
+                    saveBtn.style.cursor = 'not-allowed';
+                }
+                
+                // 显示提示
+                const messageEl = document.getElementById('shiftMessage');
+                messageEl.className = 'message info';
+                messageEl.textContent = '⚠️ 班次已设置，不可修改';
+                messageEl.style.display = 'block';
+                
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 3000);
             }
         }
         
