@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>员工后台 - 预约管理</title>
     <style>
         * {
@@ -90,8 +90,9 @@
         .bookings-table {
             background: white;
             border-radius: 10px;
-            overflow: hidden;
+            overflow-x: auto;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            -webkit-overflow-scrolling: touch;
         }
         
         .table-header {
@@ -106,22 +107,37 @@
         
         table {
             width: 100%;
+            min-width: 900px;
             border-collapse: collapse;
         }
         
         th {
             background-color: #f8f9fa;
-            padding: 15px;
+            padding: 12px 8px;
             text-align: left;
             font-weight: 600;
             color: #333;
             border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
+            font-size: 13px;
         }
         
         td {
-            padding: 15px;
+            padding: 12px 8px;
             border-bottom: 1px solid #dee2e6;
+            white-space: nowrap;
+            font-size: 13px;
         }
+        
+        /* 各列宽度 */
+        th:nth-child(1), td:nth-child(1) { width: 140px; } /* 流水号 */
+        th:nth-child(2), td:nth-child(2) { width: 80px; }  /* 姓名 */
+        th:nth-child(3), td:nth-child(3) { width: 60px; }  /* 年龄 */
+        th:nth-child(4), td:nth-child(4) { width: 120px; } /* 电话 */
+        th:nth-child(5), td:nth-child(5) { width: 100px; } /* 预约日期 */
+        th:nth-child(6), td:nth-child(6) { width: 100px; } /* 时间段 */
+        th:nth-child(7), td:nth-child(7) { width: 80px; }  /* 状态 */
+        th:nth-child(8), td:nth-child(8) { width: 140px; } /* 预约时间 */
         
         .status {
             padding: 5px 10px;
@@ -278,18 +294,21 @@
             
             emptyState.style.display = 'none';
             
-            tbody.innerHTML = bookings.map(booking => `
+            tbody.innerHTML = bookings.map(booking => {
+                const statusClass = booking.status === 'cancelled' ? 'status-cancelled' : 
+                                   (booking.verified || booking.status === 'completed') ? 'status-completed' : 'status-pending';
+                return `
                 <tr>
                     <td>${booking.serialNumber}</td>
                     <td>${booking.customerName}</td>
                     <td>${booking.age}</td>
                     <td>${booking.phone}</td>
                     <td>${booking.date}</td>
-                    <td>${booking.timeSlot}</td>
-                    <td><span class="status status-${booking.status}">${getStatusText(booking)}</span></td>
+                    <td>${booking.time}</td>
+                    <td><span class="status ${statusClass}">${getStatusText(booking)}</span></td>
                     <td>${formatDateTime(booking.createdAt)}</td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
         
         // 更新统计
@@ -305,10 +324,9 @@
         
         // 获取状态文本
         function getStatusText(booking) {
-            // 优先使用 statusText 字段
-            if (booking.statusText) return booking.statusText;
-            // 否则根据 verified 判断
-            return booking.verified ? '已核销' : '已预约';
+            if (booking.status === 'cancelled') return '已撤销';
+            if (booking.status === 'completed' || booking.verified) return '已核销';
+            return '已预约';
         }
         
         // 格式化日期时间

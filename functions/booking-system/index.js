@@ -92,7 +92,13 @@ exports.main = async function(event, context) {
         return { code: -1, success: false, message: '该时间段已约满' };
       }
       
-      const serialNumber = 'BK' + Date.now();
+      // 生成流水号：BZ + 年月日 + 6位随机数
+      const now = new Date();
+      const dateStr = now.getFullYear().toString() +
+                     String(now.getMonth() + 1).padStart(2, '0') +
+                     String(now.getDate()).padStart(2, '0');
+      const randomNum = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+      const serialNumber = 'BZ' + dateStr + randomNum;
       
       // 创建预约
       await db.collection('bookings').add({
