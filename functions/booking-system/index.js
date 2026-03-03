@@ -8,12 +8,9 @@ cloud.init({
 
 const db = cloud.database();
 
-// 主函数
-async function main(event, context) {
+exports.main = async function(event, context) {
   const path = event.path || '/';
   const method = event.httpMethod || 'GET';
-  
-  console.log('收到请求:', path, method);
   
   try {
     // 获取可预约日期
@@ -511,51 +508,9 @@ async function main(event, context) {
       return { code: 0, success: true, optometrists: optometristsRes.data };
     }
     
-    // 获取用户列表
-    if (path === '/api/users' && method === 'GET') {
-      const usersRes = await db.collection('users').orderBy('createdAt', 'desc').get();
-      return { code: 0, success: true, users: usersRes.data };
-    }
-    
-    // 清理历史数据
-    if (path === '/api/cleanup' && method === 'POST') {
-      const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-      const { days } = body;
-      
-      // 计算截止日期
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - (days || 180));
-      const cutoffStr = cutoffDate.toISOString();
-      
-      // 查找并删除旧数据
-      const oldBookings = await db.collection('bookings').where({
-        createdAt: db.command.lt(cutoffStr),
-        status: db.command.in(['completed', 'cancelled'])
-      }).get();
-      
-      let deletedCount = 0;
-      for (const booking of oldBookings.data) {
-        await db.collection('bookings').doc(booking._id).remove();
-        deletedCount++;
-      }
-      
-      return { 
-        code: 0, 
-        success: true, 
-        message: `已清理 ${deletedCount} 条历史记录`,
-        deletedCount 
-      };
-    }
-    
-    console.log('接口不存在:', path, method);
     return { code: -1, success: false, message: '接口不存在' };
 
   } catch (error) {
-    console.error('云函数错误:', error);
     return { code: -1, success: false, message: error.message };
   }
-}
-
-// 导出主函数（支持多种方式）
-exports.main = main;
-exports.handler = main;
+};

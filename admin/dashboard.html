@@ -268,62 +268,6 @@
             color: #721c24;
         }
 
-        /* 数据库标签页样式 */
-        .db-tabs {
-            display: flex;
-            gap: 0;
-        }
-
-        .db-tab {
-            background: none;
-            border: none;
-            padding: 12px 24px;
-            font-size: 14px;
-            cursor: pointer;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .db-tab:hover {
-            color: #667eea;
-        }
-
-        .db-tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            font-weight: 600;
-        }
-
-        .tab-count {
-            font-size: 12px;
-            color: #999;
-            margin-left: 5px;
-            font-weight: normal;
-        }
-
-        .refresh-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.2s;
-        }
-
-        .refresh-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .refresh-btn:active {
-            transform: scale(0.98);
-        }
-
         /* 电脑端适配 */
         @media (min-width: 1024px) {
             .container {
@@ -413,116 +357,39 @@
             </div>
         </div>
 
-        <!-- 数据库实时查看 -->
+        <!-- 预约列表 -->
         <div class="bookings-section">
-            <h2>数据库实时查看</h2>
-            
-            <!-- 标签页切换 -->
-            <div class="db-tabs" style="margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
-                <button class="db-tab active" onclick="switchDbTab('bookings')" id="tab-bookings">预约记录 <span class="tab-count" id="count-bookings"></span></button>
-                <button class="db-tab" onclick="switchDbTab('shifts')" id="tab-shifts">班次设置 <span class="tab-count" id="count-shifts"></span></button>
-                <button class="db-tab" onclick="switchDbTab('users')" id="tab-users">用户信息 <span class="tab-count" id="count-users"></span></button>
+            <h2>预约列表</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+                <input type="date" id="dateFilter" onchange="loadBookings()" placeholder="筛选日期">
+                <select id="statusFilter" onchange="loadBookings()">
+                    <option value="">全部状态</option>
+                    <option value="pending">待核销</option>
+                    <option value="completed">已核销</option>
+                    <option value="cancelled">已撤销</option>
+                </select>
             </div>
-            
-            <!-- 刷新按钮 -->
-            <div style="margin-bottom: 15px;">
-                <button class="refresh-btn" onclick="refreshCurrentTab()">
-                    <span id="refreshIcon">🔄</span> 刷新数据
-                </button>
-                <span id="lastUpdateTime" style="margin-left: 15px; color: #999; font-size: 12px;"></span>
+            <div style="overflow-x: auto;">
+                <table class="bookings-table">
+                    <thead>
+                        <tr>
+                            <th>流水号</th>
+                            <th>头像</th>
+                            <th>姓名</th>
+                            <th>微信昵称</th>
+                            <th>年龄</th>
+                            <th>电话</th>
+                            <th>预约日期</th>
+                            <th>时间段</th>
+                            <th>状态</th>
+                            <th>预约时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookingsTableBody"></tbody>
+                </table>
             </div>
-            
-            <!-- 预约记录表格 -->
-            <div id="db-bookings" class="db-content">
-                <div style="margin-bottom: 15px; display: flex; gap: 15px; flex-wrap: wrap;">
-                    <input type="date" id="dbDateFilter" onchange="loadDbBookings()" placeholder="筛选日期">
-                    <select id="dbStatusFilter" onchange="loadDbBookings()">
-                        <option value="">全部状态</option>
-                        <option value="pending">待核销</option>
-                        <option value="completed">已核销</option>
-                        <option value="cancelled">已撤销</option>
-                    </select>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="bookings-table">
-                        <thead>
-                            <tr>
-                                <th>流水号</th>
-                                <th>头像</th>
-                                <th>姓名</th>
-                                <th>微信昵称</th>
-                                <th>年龄</th>
-                                <th>电话</th>
-                                <th>预约日期</th>
-                                <th>时间段</th>
-                                <th>状态</th>
-                                <th>预约时间</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dbBookingsTableBody"></tbody>
-                    </table>
-                </div>
-                <div class="empty-state" id="dbBookingsEmptyState" style="display: none;">
-                    暂无预约数据
-                </div>
-            </div>
-            
-            <!-- 班次设置表格 -->
-            <div id="db-shifts" class="db-content" style="display: none;">
-                <div style="overflow-x: auto;">
-                    <table class="bookings-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>验光师ID</th>
-                                <th>日期</th>
-                                <th>可预约数</th>
-                                <th>创建时间</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dbShiftsTableBody"></tbody>
-                    </table>
-                </div>
-                <div class="empty-state" id="dbShiftsEmptyState" style="display: none;">
-                    暂无班次数据
-                </div>
-            </div>
-            
-            <!-- 用户信息表格 -->
-            <div id="db-users" class="db-content" style="display: none;">
-                <div style="overflow-x: auto;">
-                    <table class="bookings-table">
-                        <thead>
-                            <tr>
-                                <th>头像</th>
-                                <th>微信昵称</th>
-                                <th>OpenID</th>
-                                <th>性别</th>
-                                <th>地区</th>
-                                <th>注册时间</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dbUsersTableBody"></tbody>
-                    </table>
-                </div>
-                <div class="empty-state" id="dbUsersEmptyState" style="display: none;">
-                    暂无用户数据
-                </div>
-            </div>
-        </div>
-
-        <!-- 自动删除设置 -->
-        <div class="bookings-section">
-            <h2>数据管理设置</h2>
-            <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="autoDeleteCheckbox" onchange="saveAutoDeleteSetting()">
-                    <span>自动删除半年前的预约记录（节省存储空间）</span>
-                </label>
-                <p style="margin-top: 10px; color: #666; font-size: 13px;">
-                    开启后，系统将自动清理180天前的历史预约数据。此操作不可恢复，请谨慎开启。
-                </p>
-                <div id="autoDeleteStatus" style="margin-top: 10px; font-size: 13px; color: #28a745;"></div>
+            <div class="empty-state" id="bookingsEmptyState" style="display: none;">
+                暂无预约数据
             </div>
         </div>
     </div>
@@ -750,311 +617,8 @@
             localStorage.removeItem('user');
             window.location.href = '/staff.html';
         }
-
-        // ==================== 数据库实时查看功能 ====================
         
-        let currentDbTab = 'bookings';
-        
-        // 切换数据库标签页
-        function switchDbTab(tab) {
-            console.log('切换到标签页:', tab);
-            currentDbTab = tab;
-
-            // 更新标签页样式
-            document.querySelectorAll('.db-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('tab-' + tab).classList.add('active');
-
-            // 显示对应内容
-            document.querySelectorAll('.db-content').forEach(c => c.style.display = 'none');
-            document.getElementById('db-' + tab).style.display = 'block';
-
-            // 加载对应数据
-            console.log('当前标签页:', currentDbTab);
-            if (tab === 'users') {
-                console.log('正在调用 loadDbUsers...');
-                loadDbUsers();
-            } else if (tab === 'bookings') {
-                loadDbBookings();
-            } else if (tab === 'shifts') {
-                loadDbShifts();
-            }
-        }
-        
-        // 刷新当前标签页
-        function refreshCurrentTab() {
-            const refreshIcon = document.getElementById('refreshIcon');
-            refreshIcon.style.animation = 'spin 1s linear infinite';
-
-            if (currentDbTab === 'bookings') {
-                loadDbBookings();
-            } else if (currentDbTab === 'shifts') {
-                loadDbShifts();
-            } else if (currentDbTab === 'users') {
-                loadDbUsers();
-            }
-
-            // 同时加载所有标签页的条数
-            loadAllCounts();
-
-            // 更新时间
-            const now = new Date();
-            document.getElementById('lastUpdateTime').textContent =
-                '最后更新：' + now.toLocaleString('zh-CN');
-
-            setTimeout(() => {
-                refreshIcon.style.animation = '';
-            }, 1000);
-        }
-
-        // 加载所有标签页的条数
-        async function loadAllCounts() {
-            try {
-                // 加载预约记录条数
-                const bookingsRes = await fetch(`${API_BASE_URL}/api/bookings`);
-                const bookingsResult = await bookingsRes.json();
-                if (bookingsResult.success) {
-                    document.getElementById('count-bookings').textContent =
-                        '(' + (bookingsResult.bookings ? bookingsResult.bookings.length : 0) + ')';
-                }
-
-                // 加载班次条数
-                const shiftsRes = await fetch(`${API_BASE_URL}/api/shifts/xuxiaolong`);
-                const shiftsResult = await shiftsRes.json();
-                if (shiftsResult.success) {
-                    document.getElementById('count-shifts').textContent =
-                        '(' + (shiftsResult.shifts ? shiftsResult.shifts.length : 0) + ')';
-                }
-
-                // 加载用户条数
-                const usersRes = await fetch(`${API_BASE_URL}/api/users`);
-                const usersResult = await usersRes.json();
-                if (usersResult.success) {
-                    document.getElementById('count-users').textContent =
-                        '(' + (usersResult.users ? usersResult.users.length : 0) + ')';
-                }
-            } catch (error) {
-                console.error('加载条数失败:', error);
-            }
-        }
-        
-        // 加载预约记录
-        async function loadDbBookings() {
-            const dateFilter = document.getElementById('dbDateFilter').value;
-            const statusFilter = document.getElementById('dbStatusFilter').value;
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/bookings`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    let bookings = result.bookings;
-                    
-                    // 日期筛选
-                    if (dateFilter) {
-                        bookings = bookings.filter(b => b.date === dateFilter);
-                    }
-                    
-                    // 状态筛选
-                    if (statusFilter) {
-                        if (statusFilter === 'pending') {
-                            bookings = bookings.filter(b => !b.verified && b.status !== 'cancelled');
-                        } else if (statusFilter === 'completed') {
-                            bookings = bookings.filter(b => b.verified);
-                        } else if (statusFilter === 'cancelled') {
-                            bookings = bookings.filter(b => b.status === 'cancelled');
-                        }
-                    }
-                    
-                    renderDbBookings(bookings);
-                }
-            } catch (error) {
-                console.error('加载预约记录失败:', error);
-            }
-        }
-        
-        // 渲染预约记录
-        function renderDbBookings(bookings) {
-            const tbody = document.getElementById('dbBookingsTableBody');
-            const emptyState = document.getElementById('dbBookingsEmptyState');
-            
-            if (bookings.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
-            }
-            
-            emptyState.style.display = 'none';
-            
-            tbody.innerHTML = bookings.map(booking => {
-                const statusClass = booking.status === 'cancelled' ? 'status-cancelled' :
-                                   (booking.verified || booking.status === 'completed') ? 'status-completed' : 'status-pending';
-                const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${booking.openid || 'default'}`;
-                const avatarHtml = booking.avatar
-                    ? `<img src="${booking.avatar}" onerror="this.src='${defaultAvatar}'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
-                    : `<img src="${defaultAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`;
-                return `
-                <tr>
-                    <td>${booking.serialNumber}</td>
-                    <td>${avatarHtml}</td>
-                    <td>${booking.customerName}</td>
-                    <td>${booking.nickname || '-'}</td>
-                    <td>${booking.age}</td>
-                    <td>${booking.phone}</td>
-                    <td>${booking.date}</td>
-                    <td>${booking.time}</td>
-                    <td><span class="status ${statusClass}">${getStatusText(booking)}</span></td>
-                    <td>${formatDateTime(booking.createdAt)}</td>
-                </tr>
-            `}).join('');
-        }
-        
-        // 加载班次设置
-        async function loadDbShifts() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/shifts/xuxiaolong`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    renderDbShifts(result.shifts);
-                }
-            } catch (error) {
-                console.error('加载班次失败:', error);
-            }
-        }
-        
-        // 渲染班次设置
-        function renderDbShifts(shifts) {
-            const tbody = document.getElementById('dbShiftsTableBody');
-            const emptyState = document.getElementById('dbShiftsEmptyState');
-            
-            if (!shifts || shifts.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
-            }
-            
-            emptyState.style.display = 'none';
-            
-            tbody.innerHTML = shifts.map(shift => `
-                <tr>
-                    <td>${shift._id || shift.id}</td>
-                    <td>${shift.optometristId}</td>
-                    <td>${shift.date}</td>
-                    <td>${shift.slots || 2}</td>
-                    <td>${formatDateTime(shift.createdAt)}</td>
-                </tr>
-            `).join('');
-        }
-        
-        // 加载用户信息
-        async function loadDbUsers() {
-            try {
-                console.log('正在加载用户信息...');
-                // 调用云函数获取用户列表
-                const response = await fetch(`${API_BASE_URL}/api/users`);
-                const result = await response.json();
-                console.log('用户信息返回:', result);
-
-                if (result.success) {
-                    renderDbUsers(result.users);
-                } else {
-                    console.error('加载用户失败:', result.message);
-                    document.getElementById('dbUsersTableBody').innerHTML = '';
-                    document.getElementById('dbUsersEmptyState').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('加载用户失败:', error);
-                // 如果接口不存在，显示空状态
-                document.getElementById('dbUsersTableBody').innerHTML = '';
-                document.getElementById('dbUsersEmptyState').style.display = 'block';
-            }
-        }
-        
-        // 渲染用户信息
-        function renderDbUsers(users) {
-            const tbody = document.getElementById('dbUsersTableBody');
-            const emptyState = document.getElementById('dbUsersEmptyState');
-            
-            if (!users || users.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
-            }
-            
-            emptyState.style.display = 'none';
-            
-            tbody.innerHTML = users.map(user => {
-                const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.openid || 'default'}`;
-                const avatarHtml = user.avatar
-                    ? `<img src="${user.avatar}" onerror="this.src='${defaultAvatar}'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
-                    : `<img src="${defaultAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`;
-                const gender = user.sex === 1 ? '男' : user.sex === 2 ? '女' : '未知';
-                const location = [user.province, user.city].filter(Boolean).join(' ') || '-';
-                
-                return `
-                <tr>
-                    <td>${avatarHtml}</td>
-                    <td>${user.nickname || '微信用户'}</td>
-                    <td>${user.openid.substring(0, 20)}...</td>
-                    <td>${gender}</td>
-                    <td>${location}</td>
-                    <td>${formatDateTime(user.createdAt)}</td>
-                </tr>
-            `}).join('');
-        }
-        
-        // ==================== 自动删除设置 ====================
-        
-        // 加载自动删除设置
-        function loadAutoDeleteSetting() {
-            const setting = localStorage.getItem('autoDeleteEnabled');
-            const checkbox = document.getElementById('autoDeleteCheckbox');
-            checkbox.checked = setting === 'true';
-            
-            if (checkbox.checked) {
-                document.getElementById('autoDeleteStatus').textContent = '自动删除已开启';
-            }
-        }
-        
-        // 保存自动删除设置
-        async function saveAutoDeleteSetting() {
-            const checkbox = document.getElementById('autoDeleteCheckbox');
-            const enabled = checkbox.checked;
-            
-            localStorage.setItem('autoDeleteEnabled', enabled);
-            
-            const statusDiv = document.getElementById('autoDeleteStatus');
-            if (enabled) {
-                statusDiv.textContent = '设置已保存，系统将自动清理180天前的数据';
-                statusDiv.style.color = '#28a745';
-                
-                // 调用云函数执行清理（可选）
-                try {
-                    await fetch(`${API_BASE_URL}/api/cleanup`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ days: 180 })
-                    });
-                } catch (e) {
-                    console.log('清理接口调用失败（可能未实现）');
-                }
-            } else {
-                statusDiv.textContent = '自动删除已关闭';
-                statusDiv.style.color = '#666';
-            }
-        }
-        
-        // 添加旋转动画
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // 页面加载时初始化
+        // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             
@@ -1065,15 +629,6 @@
             
             loadStatistics();
             loadBookings();
-            
-            // 加载数据库查看默认标签页
-            loadDbBookings();
-
-            // 加载所有标签页的条数
-            loadAllCounts();
-
-            // 加载自动删除设置
-            loadAutoDeleteSetting();
         });
     </script>
 </body>
