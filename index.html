@@ -689,11 +689,14 @@
                     // 使用 QRCode.js 在前端生成二维码
                     const qrContainer = document.getElementById('qrCodeContainer');
                     qrContainer.innerHTML = '';
-                    new QRCode(qrContainer, {
-                        text: result.booking.serialNumber,
-                        width: 200,
-                        height: 200
-                    });
+                    
+                    // 创建二维码图片
+                    const qrImg = document.createElement('img');
+                    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(result.booking.serialNumber)}`;
+                    qrImg.alt = '预约二维码';
+                    qrImg.style.width = '200px';
+                    qrImg.style.height = '200px';
+                    qrContainer.appendChild(qrImg);
                     
                     document.getElementById('serialNumber').textContent = result.booking.serialNumber;
                     document.getElementById('bookingTime').textContent = 
