@@ -382,6 +382,16 @@ exports.main = async function(event, context) {
           return { code: -1, success: false, message: '获取用户信息失败: ' + userInfo.errmsg };
         }
 
+        // 调试日志：打印微信返回的用户信息
+        console.log('微信用户信息:', JSON.stringify(userInfo));
+
+        // 处理头像URL：微信返回的headimgurl可能包含尺寸参数，取最大尺寸
+        let avatarUrl = userInfo.headimgurl || '';
+        if (avatarUrl) {
+          // 去掉末尾的尺寸参数（如 /0, /132 等），获取原始大图
+          avatarUrl = avatarUrl.replace(/\/\d+$/, '');
+        }
+
         // 3. 保存用户信息到数据库
         const userCollection = db.collection('users');
         const existingUser = await userCollection.where({ openid }).get();
@@ -389,13 +399,15 @@ exports.main = async function(event, context) {
         const userData = {
           openid,
           nickname: userInfo.nickname || '微信用户',
-          avatar: userInfo.headimgurl || '',
+          avatar: avatarUrl,
           sex: userInfo.sex || 0,
           province: userInfo.province || '',
           city: userInfo.city || '',
           country: userInfo.country || '',
           updatedAt: new Date().toISOString()
         };
+
+        console.log('保存用户数据:', JSON.stringify(userData));
 
         if (existingUser.data.length === 0) {
           await userCollection.add({
@@ -417,7 +429,7 @@ exports.main = async function(event, context) {
           user: {
             openid,
             nickname: userInfo.nickname || '微信用户',
-            avatar: userInfo.headimgurl || ''
+            avatar: avatarUrl
           }
         };
 
