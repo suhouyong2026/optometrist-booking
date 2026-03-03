@@ -329,15 +329,19 @@ exports.main = async function(event, context) {
       const code = event.queryStringParameters && event.queryStringParameters.code;
 
       if (!code) {
-        return { code: -1, success: false, message: '授权失败' };
+        return { code: -1, success: false, message: '授权失败：缺少code参数' };
       }
 
       try {
         // 1. 使用 code 换取 access_token 和 openid
         const appid = 'wx1429f448f5034214';
         const secret = process.env.WECHAT_APPSECRET || 'f376c0c3efaf0a72db626ace03a84681';
+        
+        console.log('AppSecret来源:', process.env.WECHAT_APPSECRET ? '环境变量' : '硬编码');
 
         const tokenUrl = `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appid}&secret=${secret}&code=${code}&grant_type=authorization_code`;
+        
+        console.log('正在换取access_token，code:', code.substring(0, 10) + '...');
 
         const tokenRes = await new Promise((resolve, reject) => {
           const https = require('https');
@@ -345,20 +349,26 @@ exports.main = async function(event, context) {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
+              console.log('token响应:', data);
               try {
                 resolve(JSON.parse(data));
               } catch (e) {
                 reject(e);
               }
             });
-          }).on('error', reject);
+          }).on('error', (err) => {
+            console.error('请求token失败:', err);
+            reject(err);
+          });
         });
 
         if (tokenRes.errcode) {
+          console.error('微信授权失败:', tokenRes);
           return { code: -1, success: false, message: '微信授权失败: ' + tokenRes.errmsg };
         }
 
         const { access_token, openid } = tokenRes;
+        console.log('获取到openid:', openid);
 
         // 2. 使用 access_token 获取用户信息
         const userInfoUrl = `https://api.weixin.qq.com/sns/userinfo?access_token=${access_token}&openid=${openid}&lang=zh_CN`;
@@ -369,27 +379,31 @@ exports.main = async function(event, context) {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
+              console.log('userinfo响应:', data);
               try {
                 resolve(JSON.parse(data));
               } catch (e) {
                 reject(e);
               }
             });
-          }).on('error', reject);
+          }).on('error', (err) => {
+            console.error('请求userinfo失败:', err);
+            reject(err);
+          });
         });
 
         if (userInfo.errcode) {
+          console.error('获取用户信息失败:', userInfo);
           return { code: -1, success: false, message: '获取用户信息失败: ' + userInfo.errmsg };
         }
 
-        // 调试日志：打印微信返回的用户信息
         console.log('微信用户信息:', JSON.stringify(userInfo));
 
-        // 处理头像URL：微信返回的headimgurl可能包含尺寸参数，取最大尺寸
+        // 处理头像URL
         let avatarUrl = userInfo.headimgurl || '';
         if (avatarUrl) {
-          // 去掉末尾的尺寸参数（如 /0, /132 等），获取原始大图
-          avatarUrl = avatarUrl.replace(/\/\d+$/, '');
+          // 微信头像URL直接使用，不去掉尺寸参数
+          avatarUrl = avatarUrl;
         }
 
         // 3. 保存用户信息到数据库
