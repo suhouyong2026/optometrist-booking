@@ -683,7 +683,15 @@
                     document.getElementById('formContainer').style.display = 'none';
                     document.getElementById('resultContainer').style.display = 'block';
                     
-                    document.getElementById('qrCodeImage').src = result.booking.qrCode;
+                    // 使用 QRCode.js 在前端生成二维码
+                    const qrContainer = document.getElementById('qrCodeImage');
+                    qrContainer.innerHTML = '';
+                    new QRCode(qrContainer, {
+                        text: result.booking.serialNumber,
+                        width: 200,
+                        height: 200
+                    });
+                    
                     document.getElementById('serialNumber').textContent = result.booking.serialNumber;
                     document.getElementById('bookingTime').textContent = 
                         `${result.booking.date} ${result.booking.timeSlot}`;
