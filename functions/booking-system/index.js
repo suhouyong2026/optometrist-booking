@@ -8,9 +8,12 @@ cloud.init({
 
 const db = cloud.database();
 
-exports.main = async function(event, context) {
+// 主函数
+async function main(event, context) {
   const path = event.path || '/';
   const method = event.httpMethod || 'GET';
+  
+  console.log('收到请求:', path, method);
   
   try {
     // 获取可预约日期
@@ -544,9 +547,15 @@ exports.main = async function(event, context) {
       };
     }
     
+    console.log('接口不存在:', path, method);
     return { code: -1, success: false, message: '接口不存在' };
-    
+
   } catch (error) {
+    console.error('云函数错误:', error);
     return { code: -1, success: false, message: error.message };
   }
-};
+}
+
+// 导出主函数（支持多种方式）
+exports.main = main;
+exports.handler = main;
