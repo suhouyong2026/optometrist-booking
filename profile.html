@@ -289,12 +289,24 @@
         });
         
         // 检查登录状态
-        function checkLoginStatus() {
+        async function checkLoginStatus() {
             const userStr = localStorage.getItem('customerUser');
             if (userStr) {
                 currentUser = JSON.parse(userStr);
-                showUserSection();
-                loadBookings();
+                
+                // 如果有手机号，直接查询
+                if (currentUser.phone) {
+                    showUserSection();
+                    loadBookings();
+                } else {
+                    // 微信登录但没有手机号，需要输入手机号查询
+                    showLoginSection();
+                    // 预填充手机号（如果有）
+                    const savedPhone = localStorage.getItem('customerPhone');
+                    if (savedPhone) {
+                        document.getElementById('phoneInput').value = savedPhone;
+                    }
+                }
             } else {
                 showLoginSection();
             }

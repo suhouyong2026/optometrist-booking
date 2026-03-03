@@ -171,6 +171,54 @@
             text-align: center;
             padding: 40px;
         }
+        
+        /* 电脑端适配 */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 1400px;
+                padding: 0 40px;
+            }
+            
+            .stats-cards {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .scan-section {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 30px;
+                align-items: start;
+            }
+            
+            .scan-box {
+                margin-bottom: 0;
+            }
+            
+            .bookings-table {
+                margin-top: 0;
+            }
+            
+            .table-container {
+                max-height: 500px;
+            }
+            
+            th, td {
+                padding: 15px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .scan-section {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
     </style>
 </head>
 <body>
