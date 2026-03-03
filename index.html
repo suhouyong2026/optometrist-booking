@@ -573,14 +573,13 @@
                 return;
             }
 
-            // 清除本地存储的登录状态，强制重新授权
-            localStorage.removeItem('customerUser');
-            localStorage.removeItem('customerPhone');
+            // 清除门店和验光师选择，但保留用户信息（如果已登录）
+            localStorage.removeItem('selectedStore');
+            localStorage.removeItem('selectedOptometrist');
 
-            // 跳转到微信授权页，使用随机state参数
+            // 跳转到微信授权页
             const redirectUri = encodeURIComponent('https://suhouyong2026-5gq178it64857137-1404541376.tcloudbaseapp.com/wechat-callback.html');
-            const randomState = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx1429f448f5034214&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=${randomState}#wechat_redirect`;
+            const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx1429f448f5034214&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=123#wechat_redirect`;
             window.location.href = authUrl;
         }
 
