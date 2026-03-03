@@ -655,8 +655,18 @@
         // 渲染门店列表
         function renderStoreList(stores) {
             const storeList = document.getElementById('storeList');
+            if (!stores || stores.length === 0) {
+                // 如果没有数据，显示默认门店
+                storeList.innerHTML = `
+                    <div class="store-card" onclick="selectStore('store_001', '和平路总店')">
+                        <h3>和平路总店</h3>
+                        <p>天津市和平区和平路XXX号</p>
+                    </div>
+                `;
+                return;
+            }
             storeList.innerHTML = stores.map(store => `
-                <div class="store-card" onclick="selectStore('${store._id}', '${store.name}')">
+                <div class="store-card" onclick="selectStore('${store._id || store.id}', '${store.name}')">
                     <h3>${store.name}</h3>
                     <p>${store.address || '天津市和平区'}</p>
                 </div>
@@ -691,8 +701,22 @@
         // 渲染验光师列表
         function renderOptometristList(optometrists) {
             const optometristList = document.getElementById('optometristList');
+            if (!optometrists || optometrists.length === 0) {
+                // 如果没有数据，显示默认验光师
+                optometristList.innerHTML = `
+                    <div class="optometrist-card" onclick="selectOptometrist('opt_001', '许晓龙')">
+                        <div class="optometrist-avatar">许</div>
+                        <div class="optometrist-info">
+                            <div class="optometrist-name">许晓龙</div>
+                            <div class="optometrist-title">专职验光师</div>
+                            <div class="optometrist-bio">和平路总店专职验光师，从事验光工作多年，经验丰富，专业细致，为您提供优质的验光服务。擅长各类视力问题的检查与矫正，包括近视、远视、散光等常见视力问题。</div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
             optometristList.innerHTML = optometrists.map(opt => `
-                <div class="optometrist-card" onclick="selectOptometrist('${opt._id}', '${opt.name}')">
+                <div class="optometrist-card" onclick="selectOptometrist('${opt._id || opt.id}', '${opt.name}')">
                     <div class="optometrist-avatar">
                         ${opt.avatar ? `<img src="${opt.avatar}" alt="${opt.name}">` : opt.name.charAt(0)}
                     </div>
@@ -763,8 +787,8 @@
 
         // 显示登录提示
         function showLoginPrompt() {
+            hideAllPages();
             document.getElementById('loginPrompt').style.display = 'block';
-            document.getElementById('formContainer').style.display = 'none';
             document.getElementById('userInfo').style.display = 'none';
         }
 
