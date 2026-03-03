@@ -295,6 +295,13 @@
             font-weight: 600;
         }
 
+        .tab-count {
+            font-size: 12px;
+            color: #999;
+            margin-left: 5px;
+            font-weight: normal;
+        }
+
         .refresh-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -412,9 +419,9 @@
             
             <!-- 标签页切换 -->
             <div class="db-tabs" style="margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
-                <button class="db-tab active" onclick="switchDbTab('bookings')" id="tab-bookings">预约记录</button>
-                <button class="db-tab" onclick="switchDbTab('shifts')" id="tab-shifts">班次设置</button>
-                <button class="db-tab" onclick="switchDbTab('users')" id="tab-users">用户信息</button>
+                <button class="db-tab active" onclick="switchDbTab('bookings')" id="tab-bookings">预约记录 <span class="tab-count" id="count-bookings"></span></button>
+                <button class="db-tab" onclick="switchDbTab('shifts')" id="tab-shifts">班次设置 <span class="tab-count" id="count-shifts"></span></button>
+                <button class="db-tab" onclick="switchDbTab('users')" id="tab-users">用户信息 <span class="tab-count" id="count-users"></span></button>
             </div>
             
             <!-- 刷新按钮 -->
@@ -768,7 +775,7 @@
         function refreshCurrentTab() {
             const refreshIcon = document.getElementById('refreshIcon');
             refreshIcon.style.animation = 'spin 1s linear infinite';
-            
+
             if (currentDbTab === 'bookings') {
                 loadDbBookings();
             } else if (currentDbTab === 'shifts') {
@@ -776,15 +783,49 @@
             } else if (currentDbTab === 'users') {
                 loadDbUsers();
             }
-            
+
+            // 同时加载所有标签页的条数
+            loadAllCounts();
+
             // 更新时间
             const now = new Date();
-            document.getElementById('lastUpdateTime').textContent = 
+            document.getElementById('lastUpdateTime').textContent =
                 '最后更新：' + now.toLocaleString('zh-CN');
-            
+
             setTimeout(() => {
                 refreshIcon.style.animation = '';
             }, 1000);
+        }
+
+        // 加载所有标签页的条数
+        async function loadAllCounts() {
+            try {
+                // 加载预约记录条数
+                const bookingsRes = await fetch(`${API_BASE_URL}/api/bookings`);
+                const bookingsResult = await bookingsRes.json();
+                if (bookingsResult.success) {
+                    document.getElementById('count-bookings').textContent =
+                        '(' + (bookingsResult.bookings ? bookingsResult.bookings.length : 0) + ')';
+                }
+
+                // 加载班次条数
+                const shiftsRes = await fetch(`${API_BASE_URL}/api/shifts/xuxiaolong`);
+                const shiftsResult = await shiftsRes.json();
+                if (shiftsResult.success) {
+                    document.getElementById('count-shifts').textContent =
+                        '(' + (shiftsResult.shifts ? shiftsResult.shifts.length : 0) + ')';
+                }
+
+                // 加载用户条数
+                const usersRes = await fetch(`${API_BASE_URL}/api/users`);
+                const usersResult = await usersRes.json();
+                if (usersResult.success) {
+                    document.getElementById('count-users').textContent =
+                        '(' + (usersResult.users ? usersResult.users.length : 0) + ')';
+                }
+            } catch (error) {
+                console.error('加载条数失败:', error);
+            }
         }
         
         // 加载预约记录
@@ -1012,7 +1053,10 @@
             
             // 加载数据库查看默认标签页
             loadDbBookings();
-            
+
+            // 加载所有标签页的条数
+            loadAllCounts();
+
             // 加载自动删除设置
             loadAutoDeleteSetting();
         });
