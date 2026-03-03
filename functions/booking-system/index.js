@@ -87,7 +87,7 @@ exports.main = async function(event, context) {
       
       bookings = bookings.map(b => ({
         ...b,
-        statusText: b.verified ? '已核销' : '已预约'
+        statusText: b.status === 'cancelled' ? '已撤销' : (b.verified ? '已核销' : '已预约')
       }));
       
       return { code: 0, success: true, bookings: bookings };
@@ -117,7 +117,7 @@ exports.main = async function(event, context) {
     // 获取预约列表
     if (path === '/api/bookings' && method === 'GET') {
       let bookings = global.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      bookings = bookings.map(b => ({ ...b, statusText: b.verified ? '已核销' : '已预约' }));
+      bookings = bookings.map(b => ({ ...b, statusText: b.status === 'cancelled' ? '已撤销' : (b.verified ? '已核销' : '已预约') }));
       return { code: 0, success: true, bookings: bookings };
     }
     
